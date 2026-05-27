@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { StatusBadge, Sparkline } from './components/atoms'
+import { InventoryTable } from './components/InventoryTable'
 import { PortfolioHealthSection } from './components/PortfolioHealth'
 import { StickyBar } from './components/StickyBar'
 import { ThisWeekSection } from './components/ThisWeek'
@@ -30,6 +30,7 @@ function App() {
   const health = useHealth()
   const skus = useSKUs(scenario)
   const rows = skus.data ?? []
+  const dataDate = health.data?.data_date ?? null
 
   // Keep ?sku= in the URL in sync with the open drawer.
   useEffect(() => {
@@ -41,15 +42,11 @@ function App() {
 
   return (
     <>
-      <StickyBar
-        scenario={scenario}
-        setScenario={setScenario}
-        dataDate={health.data?.data_date ?? null}
-      />
+      <StickyBar scenario={scenario} setScenario={setScenario} dataDate={dataDate} />
       <main>
         <ThisWeekSection
           rows={rows}
-          dataDate={health.data?.data_date ?? null}
+          dataDate={dataDate}
           onOpenSku={setSelectedSku}
           onScrollToTable={() => scrollToId('inventory')}
           onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}
@@ -57,51 +54,20 @@ function App() {
 
         <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
 
-        {/* Temporary table — replaced by the full InventoryTable in 6.5. */}
-        <section className="section" id="inventory">
-          <div className="shell">
-            <div className="section-head">
-              <h2 className="section-title">Inventory</h2>
-              <span className="section-meta">{rows.length} SKUs</span>
+        {skus.isError ? (
+          <section className="section" id="inventory">
+            <div className="shell">
+              <div className="empty-table">Failed to load SKUs. Is the API running?</div>
             </div>
-            {skus.isError && <div className="empty-table">Failed to load SKUs.</div>}
-            <div className="table-wrap">
-              <table className="inv">
-                <thead>
-                  <tr>
-                    <th>SKU</th>
-                    <th>Product</th>
-                    <th>Status</th>
-                    <th className="num">Days</th>
-                    <th className="num">PO qty</th>
-                    <th>30d</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((s) => (
-                    <tr key={s.sku_code} onClick={() => setSelectedSku(s.sku_code)}>
-                      <td className="code">{s.sku_code}</td>
-                      <td>
-                        <div className="nm">{s.name}</div>
-                        <div className="cat">{s.category}</div>
-                      </td>
-                      <td>
-                        <StatusBadge status={s.status} />
-                      </td>
-                      <td className="num">
-                        {s.days_of_stock === null ? '∞' : s.days_of_stock.toFixed(1)}
-                      </td>
-                      <td className="num">{s.recommended_po_qty.toLocaleString()}</td>
-                      <td>
-                        <Sparkline data={s.sales_last_30_days ?? []} flags={s.confidence_flags} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <InventoryTable
+            rows={rows}
+            dataDate={dataDate}
+            selectedSku={selectedSku}
+            onOpenSku={setSelectedSku}
+          />
+        )}
 
         <footer style={{ padding: '40px 0 60px', borderTop: '1px solid var(--border-subtle)' }}>
           <div
@@ -116,8 +82,7 @@ function App() {
           >
             <span>Reorder Intelligence · v1.0</span>
             <span>
-              {health.data?.skus_loaded ?? rows.length} SKUs · data as of{' '}
-              {health.data?.data_date ?? '—'}
+              {health.data?.skus_loaded ?? rows.length} SKUs · data as of {dataDate ?? '—'}
             </span>
           </div>
         </footer>
