@@ -1,0 +1,71 @@
+# Production stack for a server with a GLOBAL nginx (see deploy/nginx.conf).
+# Runs Postgres + the FastAPI backend; the backend is published on loopback only
+# (127.0.0.1:8091) so the host nginx proxies /api to it. The frontend is built to
+# static files that the host nginx serves — there is no frontend runtime container.
+#
+#   # 1) bring up DB + API
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   # 2) build the SPA into the nginx webroot (needs no Node on the host)
+#   WEBROOT=/var/www/reorder-intelligence \
+#     docker compose -f docker-compose.prod.yml --profile build run --rm frontend-build
+#
+# Overrides via host env / root .env: POSTGRES_PASSWORD, OPENAI_API_KEY,
+# LLM_MODEL, ALLOWED_ORIGINS, BACKEND_PORT, WEBROOT.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reorder_pg_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reorder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: reorder_intel
+    volumes:
+      - reorder_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reorder -d reorder_intel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: reorder_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://reorder:${POSTGRES_PASSWORD:-changeme}@postgres:5432/reorder_intel
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-5.4-nano}
+    volumes:
+      - ./data:/data:ro # inventory.json for the bootstrap import
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8091}:8000" # global nginx proxies /api here
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health').status==200 else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # One-shot: build the SPA and copy it into the host webroot the global nginx
+  # serves. Not part of the long-running stack (profile "build").
+  frontend-build:
+    profiles: ["build"]
+    build:
+      context: ./frontend
+    command: sh -c "rm -rf /out/* && cp -r /app/dist/. /out/ && echo 'frontend deployed to webroot'"
+    volumes:
+      - ${WEBROOT:-/var/www/reorder-intelligence}:/out
+
+volumes:
+  reorder_pgdata_prod:
