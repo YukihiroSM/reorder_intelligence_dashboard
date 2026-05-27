@@ -15,6 +15,14 @@ served by the host's nginx, which also proxies `/api` to the backend.
                     postgres container (internal)
 ```
 
+## Quick start (cloned repo on the server)
+```
+cp .env.example .env      # set POSTGRES_PASSWORD (+ OPENAI_API_KEY), then:
+./deploy/deploy.sh        # builds + starts API, builds SPA into webroot, reloads nginx
+```
+`deploy.sh` is idempotent — re-run it to update after `git pull`. The manual
+steps below are what it automates.
+
 ## Prereqs
 - Docker + Docker Compose, and nginx + certbot on the host.
 - DNS A-record → server for `reorder-intelligence.yuk0-dev-team.pp.ua`.
