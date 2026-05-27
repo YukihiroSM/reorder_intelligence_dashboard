@@ -20,13 +20,11 @@ served by the host's nginx, which also proxies `/api` to the backend.
 - DNS A-record → server for `reorder-intelligence.yuk0-dev-team.pp.ua`.
 
 ## 1. Configure secrets
-Create a root `.env` (compose reads it for substitution):
+Secrets are read from a root `.env` (gitignored): compose uses it for
+`${POSTGRES_PASSWORD}` substitution, and the backend loads the rest via `env_file`.
 ```
-POSTGRES_PASSWORD=<strong-password>
-OPENAI_API_KEY=sk-...          # optional until the AI layer (Phase 7)
-# LLM_MODEL=gpt-5.4-nano
-# ALLOWED_ORIGINS=             # empty: same-origin via nginx, no CORS needed
-# BACKEND_PORT=8091
+cp .env.example .env
+# edit: set POSTGRES_PASSWORD (strong), OPENAI_API_KEY (optional until Phase 7)
 ```
 
 ## 2. Bring up DB + API

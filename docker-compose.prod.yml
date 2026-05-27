@@ -36,12 +36,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # App secrets/config come from the root .env (OPENAI_API_KEY, LLM_MODEL,
+    # ALLOWED_ORIGINS, LOG_LEVEL). Optional so the stack still boots without it.
+    env_file:
+      - path: .env
+        required: false
     environment:
+      # Derived from the in-network Postgres + POSTGRES_PASSWORD; overrides any
+      # DATABASE_URL in .env (which may point at the dev DB on :5440).
       DATABASE_URL: postgresql+asyncpg://reorder:${POSTGRES_PASSWORD:-changeme}@postgres:5432/reorder_intel
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-gpt-5.4-nano}
     volumes:
       - ./data:/data:ro # inventory.json for the bootstrap import
     ports:
