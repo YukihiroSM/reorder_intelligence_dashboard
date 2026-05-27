@@ -1,12 +1,13 @@
-"""SKU metrics endpoints. Filter/sort happen in Python (20 SKUs — negligible)."""
+"""SKU metrics endpoints. Filter/sort/paginate in Python (metrics are computed
+from sales arrays, so they can't be SQL-paginated; for ~hundreds of SKUs this is
+fine, and the table only ever fetches a page at a time)."""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
 from enum import Enum
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
@@ -22,12 +23,19 @@ from ..services.sku_metrics import (
 router = APIRouter(prefix="/api", tags=["skus"])
 
 
-class SortKey(str, Enum):
-    urgency_desc = "urgency_desc"
-    days_remaining_asc = "days_remaining_asc"
-    days_remaining_desc = "days_remaining_desc"
-    name_asc = "name_asc"
-    cost_desc = "cost_desc"
+class SortField(str, Enum):
+    urgency = "urgency"
+    code = "code"
+    name = "name"
+    stock = "stock"
+    days = "days"
+    cost = "cost"
+
+
+class SortDir(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
 
 # Higher = more urgent. Drives the default sort.
 _URGENCY = {
@@ -36,35 +44,41 @@ _URGENCY = {
     StockHealthStatus.LOW: 1,
     StockHealthStatus.HEALTHY: 0,
 }
+_INF = float("inf")
 
 
-def _days_key(m: SKUMetricsDTO) -> tuple[bool, float]:
-    # None (no demand) sorts last regardless of direction.
-    return (m.days_of_stock is None, m.days_of_stock if m.days_of_stock is not None else 0.0)
+def _days(m: SKUMetricsDTO) -> float:
+    # None (no demand) sorts last.
+    return m.days_of_stock if m.days_of_stock is not None else _INF
 
 
-_SORTERS: dict[SortKey, Callable[[Sequence[SKUMetricsDTO]], list[SKUMetricsDTO]]] = {
-    SortKey.urgency_desc: lambda ms: sorted(
-        ms, key=lambda m: (-_URGENCY[m.status], *_days_key(m))
-    ),
-    SortKey.days_remaining_asc: lambda ms: sorted(ms, key=_days_key),
-    SortKey.days_remaining_desc: lambda ms: sorted(
-        ms, key=lambda m: (m.days_of_stock is None, -(m.days_of_stock or 0.0))
-    ),
-    SortKey.name_asc: lambda ms: sorted(ms, key=lambda m: m.name.lower()),
-    SortKey.cost_desc: lambda ms: sorted(
-        ms, key=lambda m: m.estimated_reorder_cost, reverse=True
-    ),
-}
+def _sort_metrics(
+    metrics: list[SKUMetricsDTO], field: SortField, direction: SortDir
+) -> list[SKUMetricsDTO]:
+    if field is SortField.urgency:  # rank desc, then soonest-to-run-out first
+        return sorted(metrics, key=lambda m: (-_URGENCY[m.status], _days(m)))
+    keymap = {
+        SortField.code: lambda m: m.sku_code.lower(),
+        SortField.name: lambda m: m.name.lower(),
+        SortField.stock: lambda m: float(m.current_stock),
+        SortField.days: _days,
+        SortField.cost: lambda m: m.estimated_reorder_cost,
+    }
+    return sorted(metrics, key=keymap[field], reverse=direction is SortDir.desc)
 
 
 @router.get("/skus", response_model=list[SKUMetricsDTO])
 async def list_skus(
+    response: Response,
     session: AsyncSession = Depends(get_session),
     status: Annotated[list[StockHealthStatus] | None, Query()] = None,
     category: str | None = None,
     supplier: str | None = None,
-    sort: SortKey = SortKey.urgency_desc,
+    search: str | None = None,
+    sort_by: SortField = SortField.urgency,
+    sort_dir: SortDir = SortDir.asc,
+    limit: Annotated[int | None, Query(ge=1, le=500)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
     growth_pct: float | None = None,
     forecast_window: int | None = None,
     shipping_buffer: int | None = None,
@@ -85,8 +99,19 @@ async def list_skus(
         metrics = [m for m in metrics if m.category.lower() == category.lower()]
     if supplier:
         metrics = [m for m in metrics if m.supplier.lower() == supplier.lower()]
+    if search:
+        q = search.lower()
+        metrics = [
+            m for m in metrics if q in m.sku_code.lower() or q in m.name.lower()
+        ]
 
-    return _SORTERS[sort](metrics)
+    metrics = _sort_metrics(metrics, sort_by, sort_dir)
+
+    # Total (after filtering) so the client knows when to stop loading pages.
+    response.headers["X-Total-Count"] = str(len(metrics))
+    if limit is not None:
+        metrics = metrics[offset : offset + limit]
+    return metrics
 
 
 @router.get("/skus/{sku_code}", response_model=SKUMetricsDTO)

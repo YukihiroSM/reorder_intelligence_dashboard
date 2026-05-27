@@ -99,7 +99,24 @@ async def test_unknown_sku_404(client: AsyncClient) -> None:
 
 
 async def test_bad_sort_422(client: AsyncClient) -> None:
-    assert (await client.get("/api/skus?sort=bogus")).status_code == 422
+    assert (await client.get("/api/skus?sort_by=bogus")).status_code == 422
+
+
+async def test_pagination(client: AsyncClient) -> None:
+    r1 = await client.get("/api/skus?limit=10&offset=0")
+    assert r1.status_code == 200
+    assert len(r1.json()) == 10
+    assert r1.headers["x-total-count"] == "20"
+    r2 = await client.get("/api/skus?limit=10&offset=10")
+    assert len(r2.json()) == 10
+    codes1 = {s["sku_code"] for s in r1.json()}
+    codes2 = {s["sku_code"] for s in r2.json()}
+    assert codes1.isdisjoint(codes2)  # pages don't overlap
+
+
+async def test_search_filter(client: AsyncClient) -> None:
+    rows = (await client.get("/api/skus?search=glw-005")).json()
+    assert [s["sku_code"] for s in rows] == ["GLW-005"]
 
 
 async def test_config_get_and_update(client: AsyncClient) -> None:

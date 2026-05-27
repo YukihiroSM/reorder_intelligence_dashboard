@@ -1,84 +1,75 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 
-import { money, num, shortDate } from '../lib/format'
-import { daysAgo } from '../lib/format'
-import { STATUS_ORDER } from '../lib/constants'
-import type { SKU, StockStatus } from '../types'
+import { useInfiniteSKUs } from '../hooks'
+import { daysAgo, money, num, shortDate } from '../lib/format'
+import type { Scenario, SKU, SortField, StockStatus } from '../types'
 import { Dropdown, FlagPill, Sparkline, StatusBadge } from './atoms'
 
-type SortKey = 'urgency' | 'code' | 'name' | 'stock' | 'days' | 'cost'
 const STATUS_OPTS: StockStatus[] = ['STOCKOUT', 'CRITICAL', 'LOW', 'HEALTHY']
 
 export function InventoryTable({
-  rows,
+  scenario,
   dataDate,
+  categories,
+  suppliers,
   selectedSku,
   onOpenSku,
 }: {
-  rows: SKU[]
+  scenario: Scenario
   dataDate: string | null
+  categories: string[]
+  suppliers: string[]
   selectedSku: string | null
   onOpenSku: (code: string) => void
 }) {
   const [status, setStatus] = useState<StockStatus[]>([])
   const [category, setCategory] = useState<string | null>(null)
   const [supplier, setSupplier] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
-    key: 'urgency',
-    dir: 'asc',
-  })
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<SortField>('urgency')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
-  const categories = Array.from(new Set(rows.map((r) => r.category))).sort()
-  const suppliers = Array.from(new Set(rows.map((r) => r.supplier))).sort()
-  const hasFilters = status.length > 0 || !!category || !!supplier || !!query
+  const q = { status, category, supplier, search, sortBy, sortDir }
+  const query = useInfiniteSKUs(scenario, q)
+  const rows = query.data?.pages.flatMap((p) => p.items) ?? []
+  const total = query.data?.pages[0]?.total ?? 0
+  const hasFilters = status.length > 0 || !!category || !!supplier || !!search
 
-  const filtered = rows.filter((r) => {
-    if (status.length && !status.includes(r.status)) return false
-    if (category && r.category !== category) return false
-    if (supplier && r.supplier !== supplier) return false
-    if (query) {
-      const q = query.toLowerCase()
-      if (!r.sku_code.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false
+  // Infinite scroll: load the next page when the sentinel nears the viewport.
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && query.hasNextPage && !query.isFetchingNextPage) {
+          query.fetchNextPage()
+        }
+      },
+      { rootMargin: '240px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [query])
+
+  function toggleSort(field: SortField) {
+    if (sortBy === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortBy(field)
+      setSortDir('asc')
     }
-    return true
-  })
-
-  const days = (r: SKU) => (r.days_of_stock === null ? Infinity : r.days_of_stock)
-  const sorted = [...filtered].sort((a, b) => {
-    const dir = sort.dir === 'asc' ? 1 : -1
-    switch (sort.key) {
-      case 'urgency': {
-        const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-        return so !== 0 ? so : days(a) - days(b)
-      }
-      case 'stock':
-        return (a.current_stock - b.current_stock) * dir
-      case 'days':
-        return (days(a) - days(b)) * dir
-      case 'code':
-        return a.sku_code.localeCompare(b.sku_code) * dir
-      case 'name':
-        return a.name.localeCompare(b.name) * dir
-      case 'cost':
-        return (a.estimated_reorder_cost - b.estimated_reorder_cost) * dir
-    }
-  })
-
-  function toggleSort(key: SortKey) {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
   }
-  const ariaSort = (key: SortKey): 'none' | 'ascending' | 'descending' =>
-    sort.key !== key ? 'none' : sort.dir === 'asc' ? 'ascending' : 'descending'
-  const arrow = (key: SortKey) =>
-    sort.key === key ? <span className="sort-arrow">{sort.dir === 'asc' ? '↑' : '↓'}</span> : null
+  const ariaSort = (f: SortField): 'none' | 'ascending' | 'descending' =>
+    sortBy !== f ? 'none' : sortDir === 'asc' ? 'ascending' : 'descending'
+  const arrow = (f: SortField) =>
+    sortBy === f ? <span className="sort-arrow">{sortDir === 'asc' ? '↑' : '↓'}</span> : null
 
   function clearFilters() {
     setStatus([])
     setCategory(null)
     setSupplier(null)
-    setQuery('')
+    setSearch('')
   }
 
   function daysCell(r: SKU) {
@@ -99,15 +90,13 @@ export function InventoryTable({
           <div className="days-cap">365d+</div>
         </>
       )
-    else {
-      const d = r.days_of_stock
+    else
       body = (
         <>
-          <span className="days">{d > 10 ? Math.round(d) : d.toFixed(1)}</span>
+          <span className="days">{r.days_of_stock > 10 ? Math.round(r.days_of_stock) : r.days_of_stock.toFixed(1)}</span>
           <div className="days-cap">days</div>
         </>
       )
-    }
     return <td className={`num ${cls}`}>{body}</td>
   }
 
@@ -157,26 +146,22 @@ export function InventoryTable({
             <input
               type="text"
               placeholder="Search SKU or name..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           {hasFilters && (
-            <button
-              className="btn btn-ghost"
-              style={{ padding: '4px 8px', fontSize: 12 }}
-              onClick={clearFilters}
-            >
+            <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={clearFilters}>
               Clear
             </button>
           )}
           <span className="count">
-            {sorted.length} of {rows.length}
+            {rows.length} of {total}
           </span>
         </div>
 
         <div className="table-wrap">
-          {sorted.length === 0 ? (
+          {!query.isPending && rows.length === 0 ? (
             <div className="empty-table">
               <div className="ttl">No SKUs match these filters</div>
               <button className="btn btn-ghost" onClick={clearFilters}>
@@ -187,32 +172,32 @@ export function InventoryTable({
             <table className="inv">
               <thead>
                 <tr>
-                  <th scope="col" className={`sortable ${sort.key === 'code' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('code')} onClick={() => toggleSort('code')}>
+                  <th scope="col" className={`sortable ${sortBy === 'code' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('code')} onClick={() => toggleSort('code')}>
                     SKU {arrow('code')}
                   </th>
-                  <th scope="col" className={`sortable ${sort.key === 'name' ? 'active' : ''}`} style={{ minWidth: 220 }} aria-sort={ariaSort('name')} onClick={() => toggleSort('name')}>
+                  <th scope="col" className={`sortable ${sortBy === 'name' ? 'active' : ''}`} style={{ minWidth: 220 }} aria-sort={ariaSort('name')} onClick={() => toggleSort('name')}>
                     Product {arrow('name')}
                   </th>
                   <th scope="col" style={{ width: 100 }}>Status</th>
-                  <th scope="col" className={`num sortable ${sort.key === 'stock' ? 'active' : ''}`} style={{ width: 70 }} aria-sort={ariaSort('stock')} onClick={() => toggleSort('stock')}>
+                  <th scope="col" className={`num sortable ${sortBy === 'stock' ? 'active' : ''}`} style={{ width: 70 }} aria-sort={ariaSort('stock')} onClick={() => toggleSort('stock')}>
                     Stock {arrow('stock')}
                   </th>
                   <th scope="col" style={{ width: 140 }}>30-day trend</th>
                   <th scope="col" className="num" style={{ width: 96 }}>7d / 14d</th>
                   <th scope="col" className="num" style={{ width: 96 }}>Lead · ship</th>
-                  <th scope="col" className={`num sortable ${sort.key === 'days' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('days')} onClick={() => toggleSort('days')}>
+                  <th scope="col" className={`num sortable ${sortBy === 'days' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('days')} onClick={() => toggleSort('days')}>
                     Days left {arrow('days')}
                   </th>
                   <th scope="col" style={{ width: 120 }}>Reorder by</th>
                   <th scope="col" className="num" style={{ width: 110 }}>PO qty</th>
-                  <th scope="col" className={`num sortable ${sort.key === 'cost' ? 'active' : ''}`} style={{ width: 90 }} aria-sort={ariaSort('cost')} onClick={() => toggleSort('cost')}>
+                  <th scope="col" className={`num sortable ${sortBy === 'cost' ? 'active' : ''}`} style={{ width: 90 }} aria-sort={ariaSort('cost')} onClick={() => toggleSort('cost')}>
                     Cost {arrow('cost')}
                   </th>
                   <th scope="col" style={{ width: 70 }}>Flags</th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((r) => (
+                {rows.map((r) => (
                   <tr
                     key={r.sku_code}
                     className={selectedSku === r.sku_code ? 'selected' : ''}
@@ -272,6 +257,18 @@ export function InventoryTable({
             </table>
           )}
         </div>
+
+        {/* Infinite-scroll sentinel + status line */}
+        <div ref={sentinel} style={{ height: 1 }} />
+        {rows.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 12, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+            {query.isFetchingNextPage
+              ? 'Loading more…'
+              : query.hasNextPage
+                ? `Scroll to load more · ${rows.length} of ${total}`
+                : `All ${total} loaded`}
+          </div>
+        )}
       </div>
     </section>
   )

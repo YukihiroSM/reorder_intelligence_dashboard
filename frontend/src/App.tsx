@@ -34,6 +34,9 @@ function App() {
   const dataDate = health.data?.data_date ?? null
   const selectedRow = rows.find((r) => r.sku_code === selectedSku) ?? null
   const loading = skus.isPending && rows.length === 0
+  // Filter-dropdown options come from the full set (the table itself paginates).
+  const categories = Array.from(new Set(rows.map((r) => r.category))).sort()
+  const suppliers = Array.from(new Set(rows.map((r) => r.supplier))).sort()
 
   // Keep ?sku= in the URL in sync with the open drawer.
   useEffect(() => {
@@ -83,8 +86,10 @@ function App() {
             />
             <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
             <InventoryTable
-              rows={rows}
+              scenario={scenario}
               dataDate={dataDate}
+              categories={categories}
+              suppliers={suppliers}
               selectedSku={selectedSku}
               onOpenSku={setSelectedSku}
             />

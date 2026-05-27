@@ -67,11 +67,17 @@ export interface Scenario {
   forecastDays: number // days -> forecast_window
 }
 
-export interface SKUFilters {
-  status?: StockStatus[]
-  category?: string
-  supplier?: string
-  sort?: string
+export type SortField = 'urgency' | 'code' | 'name' | 'stock' | 'days' | 'cost'
+export type SortDir = 'asc' | 'desc'
+
+// Server-side query for the paginated inventory table.
+export interface SKUTableQuery {
+  status: StockStatus[]
+  category: string | null
+  supplier: string | null
+  search: string
+  sortBy: SortField
+  sortDir: SortDir
 }
 
 // Mirrors backend ScenarioOut / ScenarioCreate (saved config snapshots).

@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Total-Count"],
     )
     for module in (health, skus, config_routes, scenarios, importing):
         app.include_router(module.router)

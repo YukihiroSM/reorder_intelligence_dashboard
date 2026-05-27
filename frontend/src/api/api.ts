@@ -2,11 +2,14 @@ import type {
   AppConfig,
   Health,
   SKU,
+  SKUTableQuery,
   Scenario,
   ScenarioCreate,
   ScenarioSaved,
 } from '../types'
 import { client } from './client'
+
+export const PAGE_SIZE = 10
 
 // Map the live scenario controls to the API's query overrides.
 export function scenarioParams(s: Scenario) {
@@ -24,6 +27,32 @@ export async function getSKUs(scenario: Scenario): Promise<SKU[]> {
     params: scenarioParams(scenario),
   })
   return data
+}
+
+// Paginated table fetch (server-side filter + sort + slice). Reads the total
+// from the X-Total-Count header so the infinite query knows when to stop.
+export async function getSKUsPage(
+  scenario: Scenario,
+  q: SKUTableQuery,
+  offset: number,
+): Promise<{ items: SKU[]; total: number }> {
+  const params: Record<string, unknown> = {
+    ...scenarioParams(scenario),
+    limit: PAGE_SIZE,
+    offset,
+    sort_by: q.sortBy,
+    sort_dir: q.sortDir,
+  }
+  if (q.status.length) params.status = q.status
+  if (q.category) params.category = q.category
+  if (q.supplier) params.supplier = q.supplier
+  if (q.search) params.search = q.search
+  const res = await client.get<SKU[]>('/api/skus', {
+    params,
+    paramsSerializer: { indexes: null }, // status=A&status=B (no [] indices)
+  })
+  const total = Number(res.headers['x-total-count'] ?? res.data.length)
+  return { items: res.data, total }
 }
 
 export async function getSKU(code: string, scenario: Scenario): Promise<SKU> {

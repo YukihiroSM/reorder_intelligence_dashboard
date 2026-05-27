@@ -1,7 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
-import { getConfig, getHealth, getSKU, getSKUs, getScenarios } from './api/api'
-import type { Scenario } from './types'
+import {
+  getConfig,
+  getHealth,
+  getSKU,
+  getSKUs,
+  getSKUsPage,
+  getScenarios,
+} from './api/api'
+import type { Scenario, SKUTableQuery } from './types'
 
 // Scenario params live in the query key, so moving a slider refetches cleanly.
 export function useSKUs(scenario: Scenario) {
@@ -17,6 +24,20 @@ export function useSKU(code: string | null, scenario: Scenario) {
     queryKey: ['sku', code, scenario],
     queryFn: () => getSKU(code as string, scenario),
     enabled: !!code,
+  })
+}
+
+// Paginated, infinite-scroll table data. Stops when all matching rows are loaded.
+export function useInfiniteSKUs(scenario: Scenario, q: SKUTableQuery) {
+  return useInfiniteQuery({
+    queryKey: ['skus-page', scenario, q],
+    queryFn: ({ pageParam }) => getSKUsPage(scenario, q, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((n, p) => n + p.items.length, 0)
+      return loaded < lastPage.total ? loaded : undefined
+    },
+    placeholderData: (prev) => prev,
   })
 }
 
