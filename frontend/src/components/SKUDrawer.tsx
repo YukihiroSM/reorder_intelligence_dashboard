@@ -406,7 +406,7 @@ export function SKUDrawer({
                   />
                   <MetricCell
                     label="Reorder by"
-                    value={shortDate(r.reorder_date, dataDate)}
+                    value={shortDate(r.reorder_date)}
                     caption={isOverdue ? `overdue ${overdue}d` : 'on schedule'}
                     highlight={isOverdue}
                   />

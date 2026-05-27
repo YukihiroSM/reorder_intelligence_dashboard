@@ -105,7 +105,7 @@ export function InventoryTable({
     const overdue = daysAgo(r.reorder_date, dataDate)
     return (
       <>
-        <div className="date">{shortDate(r.reorder_date, dataDate)}</div>
+        <div className="date">{shortDate(r.reorder_date)}</div>
         {overdue !== null && overdue > 0 && <div className="od">overdue {overdue}d</div>}
       </>
     )
