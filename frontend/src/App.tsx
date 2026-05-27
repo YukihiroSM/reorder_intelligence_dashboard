@@ -80,6 +80,7 @@ function App() {
             <ThisWeekSection
               rows={rows}
               dataDate={dataDate}
+              forecastDays={scenario.forecastDays}
               onOpenSku={setSelectedSku}
               onScrollToTable={() => scrollToId('inventory')}
               onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}

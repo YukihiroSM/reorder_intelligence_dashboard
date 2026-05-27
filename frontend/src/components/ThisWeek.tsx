@@ -2,6 +2,7 @@ import { ArrowRight, Check } from 'lucide-react'
 
 import { daysAgo, money } from '../lib/format'
 import type { SKU } from '../types'
+import { InfoTip } from './atoms'
 
 // A SKU needs ordering this week if it's stocked out, or its (already
 // scenario-adjusted) days of stock are within the lead time + a 7-day buffer.
@@ -14,12 +15,14 @@ function needsThisWeek(r: SKU): boolean {
 export function ThisWeekSection({
   rows,
   dataDate,
+  forecastDays,
   onOpenSku,
   onScrollToTable,
   onScrollToCashflow,
 }: {
   rows: SKU[]
   dataDate: string | null
+  forecastDays: number
   onOpenSku: (code: string) => void
   onScrollToTable: () => void
   onScrollToCashflow: () => void
@@ -51,6 +54,16 @@ export function ThisWeekSection({
   }
   const maxBar = Math.max(1, ...barRows.map((b) => b.value))
 
+  // Lead-cycle cover: cash if each order were sized to cover at least one full
+  // production+shipping cycle (max of forecast window and total lead), not just
+  // the forecast window. The recommended PO still follows the brief's formula —
+  // this is the safer-stock comparison for long-lead suppliers.
+  const leadCycleQty = (r: SKU) =>
+    Math.max(r.moq, Math.ceil(r.projected_velocity * Math.max(forecastDays, r.total_lead_days)))
+  const leadCycleCost = needing.reduce((s, r) => s + leadCycleQty(r) * r.cost_per_unit_usd, 0)
+  const leadCycleExtra = leadCycleCost - cashCommitment
+  const underCovered = needing.filter((r) => leadCycleQty(r) > r.recommended_po_qty).length
+
   const stockouts = rows.filter((r) => r.status === 'STOCKOUT')
   const dayLost = (r: SKU) => Math.round(r.velocity_14d * r.retail_price_usd)
 
@@ -62,7 +75,7 @@ export function ThisWeekSection({
           <span className="section-meta">Live with scenario</span>
         </div>
 
-        <div className="grid-3">
+        <div className="grid-3" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           {/* Card 1: needs ordering */}
           <div className="card hero">
             <div className="card-tag">Needs ordering</div>
@@ -163,7 +176,53 @@ export function ThisWeekSection({
             </div>
           </div>
 
-          {/* Card 3: active stockouts */}
+          {/* Card 3: lead-cycle cover */}
+          <div className="card hero">
+            <div className="card-tag">
+              Lead-cycle cover
+              <InfoTip
+                align="left"
+                text="Cash if every order were sized to cover at least one full production + shipping cycle, not just the forecast window. The recommended PO still follows the forecast window — this is the safer-stock alternative for long-lead suppliers."
+              />
+            </div>
+            <div className="card-display">{money(leadCycleCost)}</div>
+            <div className="card-sub">to cover ≥ 1 full supply cycle</div>
+
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>vs {forecastDays}-day plan</span>
+                <span
+                  style={{
+                    fontVariantNumeric: 'tabular-nums',
+                    fontWeight: 500,
+                    color: leadCycleExtra > 0 ? 'var(--critical-fg)' : 'var(--text-tertiary)',
+                  }}
+                >
+                  {leadCycleExtra > 0 ? `+${money(leadCycleExtra)}` : '—'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>under-covered</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                  {underCovered} of {needing.length} SKUs
+                </span>
+              </div>
+            </div>
+
+            <div className="card-footer">
+              <button className="link-btn" onClick={onScrollToTable}>
+                Review long-lead{' '}
+                <span className="arrow">
+                  <ArrowRight size={13} />
+                </span>
+              </button>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                prod + ship + buffer
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: active stockouts */}
           {stockouts.length === 0 ? (
             <div className="card hero" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="card-tag">Active stockouts</div>
