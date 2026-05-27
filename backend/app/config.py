@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str
     openai_api_key: str | None = None
     llm_model: str = "gpt-5.4-nano"
+    # gpt-5.4-nano is a reasoning model; "low" keeps latency/cost sane for a 20-SKU
+    # portfolio while still letting it reason over trade-offs. Override via env.
+    llm_reasoning_effort: str = "low"
     allowed_origins: str = "http://localhost:5173"
     log_level: str = "INFO"
 

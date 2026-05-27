@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..db import Base
-from .ai import AISuggestion
+from .ai import AIBriefing, AISuggestion
 from .config import AppConfig, SavedScenario
 from .importing import ImportRun
 from .reference import Category, Supplier
@@ -21,4 +21,5 @@ __all__ = [
     "SavedScenario",
     "ImportRun",
     "AISuggestion",
+    "AIBriefing",
 ]

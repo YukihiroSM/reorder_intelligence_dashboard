@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db import engine
 from .routes import config as config_routes
-from .routes import health, importing, scenarios, skus
+from .routes import ai, health, importing, scenarios, skus
 
 
 @asynccontextmanager
@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["X-Total-Count"],
     )
-    for module in (health, skus, config_routes, scenarios, importing):
+    for module in (health, skus, config_routes, scenarios, importing, ai):
         app.include_router(module.router)
     return app
 

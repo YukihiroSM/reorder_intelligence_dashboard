@@ -37,10 +37,20 @@ class ConfidenceFlag(str, enum.Enum):
 
 class AIActionType(str, enum.Enum):
     ORDER_NOW = "ORDER_NOW"
+    EXPEDITE = "EXPEDITE"  # order now AND pay for rush — a stockout gap is already baked in
     ORDER_SOON = "ORDER_SOON"
     WAIT = "WAIT"
+    REDUCE_ORDER = "REDUCE_ORDER"  # MOQ overshoots near-term demand — don't tie up the cash
     INVESTIGATE = "INVESTIGATE"
     DISCONTINUE = "DISCONTINUE"
+
+
+class AIConfidence(str, enum.Enum):
+    """How much to trust the recommendation, given the underlying data quality."""
+
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
 
 
 class ScenarioKind(str, enum.Enum):
