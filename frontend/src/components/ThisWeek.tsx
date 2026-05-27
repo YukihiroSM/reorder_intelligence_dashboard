@@ -24,17 +24,33 @@ export function ThisWeekSection({
   onScrollToTable: () => void
   onScrollToCashflow: () => void
 }) {
-  const needsOrdering = rows
+  const needing = rows
     .filter(needsThisWeek)
     .sort(
       (a, b) =>
         (a.status === 'STOCKOUT' ? 0 : 1) - (b.status === 'STOCKOUT' ? 0 : 1) ||
         (a.days_of_stock ?? Infinity) - (b.days_of_stock ?? Infinity),
     )
-    .slice(0, 4)
+  const preview = needing.slice(0, 4) // most-urgent few, listed in card 1
+  const cashCommitment = needing.reduce((s, r) => s + r.estimated_reorder_cost, 0)
 
-  const cashCommitment = needsOrdering.reduce((s, r) => s + r.estimated_reorder_cost, 0)
-  const maxPo = Math.max(1, ...needsOrdering.map((r) => r.estimated_reorder_cost))
+  // Cash breakdown: biggest cash items + a "+N more" aggregate, so the bars
+  // account for the full committed total rather than just the top few.
+  const byCost = [...needing].sort(
+    (a, b) => b.estimated_reorder_cost - a.estimated_reorder_cost,
+  )
+  const barRows: { key: string; label: string; value: number }[] = byCost
+    .slice(0, 4)
+    .map((r) => ({ key: r.sku_code, label: r.sku_code, value: r.estimated_reorder_cost }))
+  if (needing.length > 4) {
+    barRows.push({
+      key: '__more',
+      label: `+${needing.length - 4} more`,
+      value: byCost.slice(4).reduce((s, r) => s + r.estimated_reorder_cost, 0),
+    })
+  }
+  const maxBar = Math.max(1, ...barRows.map((b) => b.value))
+
   const stockouts = rows.filter((r) => r.status === 'STOCKOUT')
   const dayLost = (r: SKU) => Math.round(r.velocity_14d * r.retail_price_usd)
 
@@ -51,14 +67,14 @@ export function ThisWeekSection({
           <div className="card hero">
             <div className="card-tag">Needs ordering</div>
             <div className="card-display">
-              {needsOrdering.length}{' '}
+              {needing.length}{' '}
               <span style={{ fontSize: 18, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                SKU{needsOrdering.length === 1 ? '' : 's'}
+                SKU{needing.length === 1 ? '' : 's'}
               </span>
             </div>
             <div className="card-sub">this week</div>
 
-            {needsOrdering.length === 0 ? (
+            {needing.length === 0 ? (
               <div className="allclear" style={{ marginTop: 16 }}>
                 <span className="check">
                   <Check size={14} strokeWidth={2.4} />
@@ -67,7 +83,7 @@ export function ThisWeekSection({
               </div>
             ) : (
               <div className="tw-list">
-                {needsOrdering.map((r) => {
+                {preview.map((r) => {
                   const overdue = daysAgo(r.reorder_date, dataDate)
                   return (
                     <button
@@ -108,7 +124,7 @@ export function ThisWeekSection({
                 </span>
               </button>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                {needsOrdering.length} of {rows.length}
+                {needing.length} of {rows.length}
               </span>
             </div>
           </div>
@@ -119,20 +135,17 @@ export function ThisWeekSection({
             <div className="card-display">{money(cashCommitment)}</div>
             <div className="card-sub">
               committed if you order{' '}
-              {needsOrdering.length === 1 ? 'this SKU' : `all ${needsOrdering.length}`} today
+              {needing.length === 1 ? 'this SKU' : `all ${needing.length}`} today
             </div>
 
             <div className="cash-breakdown">
-              {needsOrdering.slice(0, 3).map((r) => (
-                <div key={r.sku_code} className="seg-row">
-                  <span className="lbl">{r.sku_code}</span>
+              {barRows.map((b) => (
+                <div key={b.key} className="seg-row">
+                  <span className="lbl">{b.label}</span>
                   <span className="bar">
-                    <span
-                      className="fill"
-                      style={{ width: `${(r.estimated_reorder_cost / maxPo) * 100}%` }}
-                    />
+                    <span className="fill" style={{ width: `${(b.value / maxBar) * 100}%` }} />
                   </span>
-                  <span className="amt">{money(r.estimated_reorder_cost)}</span>
+                  <span className="amt">{money(b.value)}</span>
                 </div>
               ))}
             </div>
@@ -145,7 +158,7 @@ export function ThisWeekSection({
                 </span>
               </button>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                {needsOrdering.length === 0 ? 'nothing due' : 'order today'}
+                {needing.length === 0 ? 'nothing due' : 'order today'}
               </span>
             </div>
           </div>
