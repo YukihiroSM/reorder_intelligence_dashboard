@@ -101,6 +101,7 @@ table.inv thead th {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0; /* keep both buttons — never let the row's text squeeze out the "+" */
   border: 1px solid var(--border-default);
   border-radius: 6px;
   overflow: hidden;

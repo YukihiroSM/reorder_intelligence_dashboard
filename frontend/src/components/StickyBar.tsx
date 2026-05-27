@@ -203,15 +203,30 @@ export function StickyBar({
               </button>
               {menu === 'settings' && (
                 <div className="bar-menu">
-                  <div className="bar-menu-head">Stock-health thresholds</div>
+                  <div
+                    className="bar-menu-head"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <span>Stock-health thresholds</span>
+                    {(crit !== 1 || low !== 1.5) && (
+                      <button
+                        className="bar-menu-link"
+                        onClick={() =>
+                          updateMut.mutate({ critical_multiplier: 1, low_multiplier: 1.5 })
+                        }
+                      >
+                        reset
+                      </button>
+                    )}
+                  </div>
                   <div className="bar-menu-row">
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div className="bar-menu-row-title">Critical</div>
-                      <div className="bar-menu-row-sub">days of stock &lt; lead × {crit.toFixed(2)}</div>
+                      <div className="bar-menu-row-sub">days &lt; lead × {crit.toFixed(2)}</div>
                     </div>
                     <Stepper
                       value={crit}
-                      min={0.25}
+                      min={0.5}
                       max={low}
                       step={0.25}
                       disabled={config.isPending || updateMut.isPending}
@@ -219,9 +234,9 @@ export function StickyBar({
                     />
                   </div>
                   <div className="bar-menu-row">
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div className="bar-menu-row-title">Low</div>
-                      <div className="bar-menu-row-sub">days of stock &lt; lead × {low.toFixed(2)}</div>
+                      <div className="bar-menu-row-sub">days &lt; lead × {low.toFixed(2)}</div>
                     </div>
                     <Stepper
                       value={low}
