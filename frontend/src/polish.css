@@ -34,6 +34,14 @@ table.inv thead th {
   top: auto;
 }
 
+/* The runway / cash-breakdown bar fills are <span>s with no display set, so as
+ * inline elements they ignore width/height and collapse to nothing. Make them
+ * block so the percentage width + 100% height actually render. */
+.runway-row .bar .fill,
+.cash-breakdown .seg-row .fill {
+  display: block;
+}
+
 /* Info tooltip: small "?" icon with a bubble that shows on hover/focus. */
 .infotip {
   position: relative;
