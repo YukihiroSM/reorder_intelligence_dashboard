@@ -14,6 +14,8 @@ const STATUS_ORDER: StockStatus[] = ['HEALTHY', 'LOW', 'CRITICAL', 'STOCKOUT']
 const CATEGORIES = Object.keys(CATEGORY_COLORS)
 
 const fmt = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Math.round(v)}`)
+// Compact y-axis labels (no decimal) so large 3-digit-k values don't clip.
+const axisFmt = (v: number) => (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${Math.round(v)}`)
 
 /* ===== Donut ===== */
 function StatusDonut({ rows }: { rows: SKU[] }) {
@@ -131,7 +133,7 @@ function CashHorizon({ rows, forecastDays }: { rows: SKU[]; forecastDays: number
   const maxTotal = Math.max(1, ...weeks.map((w) => w.total))
   const W = 520
   const H = 200
-  const padL = 36
+  const padL = 48
   const padR = 12
   const padT = 16
   const padB = 28
@@ -178,7 +180,7 @@ function CashHorizon({ rows, forecastDays }: { rows: SKU[]; forecastDays: number
           return (
             <g key={i}>
               <line className="grid-line" x1={padL} x2={W - padR} y1={y} y2={y} />
-              <text className="axis-tick" x={padL - 6} y={y + 3} textAnchor="end">{fmt(t)}</text>
+              <text className="axis-tick" x={padL - 6} y={y + 3} textAnchor="end">{axisFmt(t)}</text>
             </g>
           )
         })}
