@@ -1,46 +1,22 @@
-"""Domain enums. Python-side source of truth; mirrored as PostgreSQL enum types.
+"""Re-export of the canonical domain enums (defined in app.enums).
 
-`str` mixin so values serialize cleanly and member name == stored value.
+Kept so model/schema modules can keep importing from `..models.enums`.
 """
 
 from __future__ import annotations
 
-import enum
+from ..enums import (
+    AIActionType,
+    ConfidenceFlag,
+    ImportStatus,
+    ScenarioKind,
+    StockHealthStatus,
+)
 
-
-class StockHealthStatus(str, enum.Enum):
-    HEALTHY = "HEALTHY"
-    LOW = "LOW"
-    CRITICAL = "CRITICAL"
-    STOCKOUT = "STOCKOUT"
-
-
-class ImportStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    SUCCESS = "SUCCESS"
-    PARTIAL = "PARTIAL"
-    FAILED = "FAILED"
-    SKIPPED = "SKIPPED"
-
-
-class ConfidenceFlag(str, enum.Enum):
-    RECENT_STOCKOUT = "RECENT_STOCKOUT"
-    LEADING_ZEROS = "LEADING_ZEROS"
-    HIGH_VOLATILITY = "HIGH_VOLATILITY"
-    DECLINING_TREND = "DECLINING_TREND"
-    VELOCITY_DIVERGENCE = "VELOCITY_DIVERGENCE"
-    SPARSE_DATA = "SPARSE_DATA"
-    MOQ_OVERSHOOT = "MOQ_OVERSHOOT"
-
-
-class AIActionType(str, enum.Enum):
-    ORDER_NOW = "ORDER_NOW"
-    ORDER_SOON = "ORDER_SOON"
-    WAIT = "WAIT"
-    INVESTIGATE = "INVESTIGATE"
-    DISCONTINUE = "DISCONTINUE"
-
-
-class ScenarioKind(str, enum.Enum):
-    BASELINE = "BASELINE"
-    CUSTOM = "CUSTOM"
+__all__ = [
+    "StockHealthStatus",
+    "ImportStatus",
+    "ConfidenceFlag",
+    "AIActionType",
+    "ScenarioKind",
+]
