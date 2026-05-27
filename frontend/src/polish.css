@@ -34,6 +34,16 @@ table.inv thead th {
   top: auto;
 }
 
+/* This Week cards are equal height (grid stretch); make each a flex column and
+ * pin its footer to the bottom so all card actions line up on one row. */
+#this-week .card.hero {
+  display: flex;
+  flex-direction: column;
+}
+#this-week .card-footer {
+  margin-top: auto;
+}
+
 /* The runway / cash-breakdown bar fills are <span>s with no display set, so as
  * inline elements they ignore width/height and collapse to nothing. Make them
  * block so the percentage width + 100% height actually render. */
