@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { getConfig, getHealth, getSKU, getSKUs } from './api/api'
+import { getConfig, getHealth, getSKU, getSKUs, getScenarios } from './api/api'
 import type { Scenario } from './types'
 
 // Scenario params live in the query key, so moving a slider refetches cleanly.
@@ -26,4 +26,8 @@ export function useConfig() {
 
 export function useHealth() {
   return useQuery({ queryKey: ['health'], queryFn: getHealth })
+}
+
+export function useScenarios() {
+  return useQuery({ queryKey: ['scenarios'], queryFn: getScenarios })
 }

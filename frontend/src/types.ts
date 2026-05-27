@@ -73,3 +73,24 @@ export interface SKUFilters {
   supplier?: string
   sort?: string
 }
+
+// Mirrors backend ScenarioOut / ScenarioCreate (saved config snapshots).
+export interface ScenarioSaved {
+  id: string
+  name: string
+  kind: 'BASELINE' | 'CUSTOM'
+  description: string | null
+  shipping_buffer_days: number
+  forecast_window_days: number
+  growth_pct: number
+  critical_multiplier: number
+  low_multiplier: number
+  created_at: string
+}
+
+export interface ScenarioCreate {
+  name: string
+  shipping_buffer_days: number
+  forecast_window_days: number
+  growth_pct: number
+}

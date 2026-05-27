@@ -1,4 +1,11 @@
-import type { AppConfig, Health, SKU, Scenario } from '../types'
+import type {
+  AppConfig,
+  Health,
+  SKU,
+  Scenario,
+  ScenarioCreate,
+  ScenarioSaved,
+} from '../types'
 import { client } from './client'
 
 // Map the live scenario controls to the API's query overrides.
@@ -39,4 +46,18 @@ export async function updateConfig(patch: Partial<AppConfig>): Promise<AppConfig
 export async function getHealth(): Promise<Health> {
   const { data } = await client.get<Health>('/api/health')
   return data
+}
+
+export async function getScenarios(): Promise<ScenarioSaved[]> {
+  const { data } = await client.get<ScenarioSaved[]>('/api/scenarios')
+  return data
+}
+
+export async function createScenario(payload: ScenarioCreate): Promise<ScenarioSaved> {
+  const { data } = await client.post<ScenarioSaved>('/api/scenarios', payload)
+  return data
+}
+
+export async function deleteScenario(id: string): Promise<void> {
+  await client.delete(`/api/scenarios/${id}`)
 }
