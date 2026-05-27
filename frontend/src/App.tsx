@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { InventoryTable } from './components/InventoryTable'
 import { PortfolioHealthSection } from './components/PortfolioHealth'
+import { SKUDrawer } from './components/SKUDrawer'
 import { StickyBar } from './components/StickyBar'
 import { ThisWeekSection } from './components/ThisWeek'
 import { useHealth, useSKUs } from './hooks'
@@ -31,6 +32,7 @@ function App() {
   const skus = useSKUs(scenario)
   const rows = skus.data ?? []
   const dataDate = health.data?.data_date ?? null
+  const selectedRow = rows.find((r) => r.sku_code === selectedSku) ?? null
 
   // Keep ?sku= in the URL in sync with the open drawer.
   useEffect(() => {
@@ -87,6 +89,13 @@ function App() {
           </div>
         </footer>
       </main>
+
+      <SKUDrawer
+        sku={selectedRow}
+        scenario={scenario}
+        dataDate={dataDate}
+        onClose={() => setSelectedSku(null)}
+      />
     </>
   )
 }
