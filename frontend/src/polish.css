@@ -1,0 +1,38 @@
+/* Loading skeletons + accessibility polish (kept separate from the ported design CSS). */
+
+.skel {
+  background: linear-gradient(90deg, var(--bg), #eceae7, var(--bg));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: 6px;
+}
+.skel-card {
+  height: 200px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+.skel-row {
+  height: 44px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Respect reduced-motion: kill the pulses/shimmers. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Keyboard focus visibility across interactive elements. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}

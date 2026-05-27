@@ -33,6 +33,7 @@ function App() {
   const rows = skus.data ?? []
   const dataDate = health.data?.data_date ?? null
   const selectedRow = rows.find((r) => r.sku_code === selectedSku) ?? null
+  const loading = skus.isPending && rows.length === 0
 
   // Keep ?sku= in the URL in sync with the open drawer.
   useEffect(() => {
@@ -46,29 +47,48 @@ function App() {
     <>
       <StickyBar scenario={scenario} setScenario={setScenario} dataDate={dataDate} />
       <main>
-        <ThisWeekSection
-          rows={rows}
-          dataDate={dataDate}
-          onOpenSku={setSelectedSku}
-          onScrollToTable={() => scrollToId('inventory')}
-          onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}
-        />
+        {loading && (
+          <section className="section">
+            <div className="shell">
+              <div className="grid-3" style={{ marginBottom: 24 }}>
+                <div className="skel skel-card" />
+                <div className="skel skel-card" />
+                <div className="skel skel-card" />
+              </div>
+              <div className="table-wrap">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="skel-row" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
-        <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
-
-        {skus.isError ? (
+        {skus.isError && (
           <section className="section" id="inventory">
             <div className="shell">
               <div className="empty-table">Failed to load SKUs. Is the API running?</div>
             </div>
           </section>
-        ) : (
-          <InventoryTable
-            rows={rows}
-            dataDate={dataDate}
-            selectedSku={selectedSku}
-            onOpenSku={setSelectedSku}
-          />
+        )}
+
+        {!loading && !skus.isError && (
+          <>
+            <ThisWeekSection
+              rows={rows}
+              dataDate={dataDate}
+              onOpenSku={setSelectedSku}
+              onScrollToTable={() => scrollToId('inventory')}
+              onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}
+            />
+            <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
+            <InventoryTable
+              rows={rows}
+              dataDate={dataDate}
+              selectedSku={selectedSku}
+              onOpenSku={setSelectedSku}
+            />
+          </>
         )}
 
         <footer style={{ padding: '40px 0 60px', borderTop: '1px solid var(--border-subtle)' }}>

@@ -198,11 +198,13 @@ function synthesize(r: SKU): AIResult {
 function AIBlock({ sku }: { sku: SKU }) {
   const [state, setState] = useState<'idle' | 'loading' | 'result'>('idle')
   const [result, setResult] = useState<AIResult | null>(null)
-
-  useEffect(() => {
+  // Reset when the drawer switches SKUs (adjust-state-during-render pattern).
+  const [forSku, setForSku] = useState(sku.sku_code)
+  if (sku.sku_code !== forSku) {
+    setForSku(sku.sku_code)
     setState('idle')
     setResult(null)
-  }, [sku.sku_code])
+  }
 
   function generate() {
     setState('loading')
@@ -291,11 +293,10 @@ export function SKUDrawer({
 }) {
   const open = !!sku
   const [expandedFlag, setExpandedFlag] = useState<string | null>(null)
+  // Hold the last SKU so content stays during the close animation; update
+  // during render whenever a (new) SKU is selected.
   const [shown, setShown] = useState<SKU | null>(sku)
-
-  useEffect(() => {
-    if (sku) setShown(sku)
-  }, [sku])
+  if (sku && sku !== shown) setShown(sku)
 
   useEffect(() => {
     if (!open) return

@@ -23,7 +23,16 @@ function StatusDonut({ rows }: { rows: SKU[] }) {
   const cy = 80
   const R = 70
   const r = 50
-  let acc = -Math.PI / 2
+
+  // Precompute slice angles without mutating a render-scope accumulator.
+  const slices = counts
+    .filter((c) => c.count > 0)
+    .map((c, i, arr) => {
+      const startFrac = arr.slice(0, i).reduce((s, x) => s + x.count, 0) / (total || 1)
+      const start = -Math.PI / 2 + startFrac * 2 * Math.PI
+      const end = start + (c.count / (total || 1)) * 2 * Math.PI - 0.012
+      return { k: c.k, start, end }
+    })
 
   function arcPath(start: number, end: number): string {
     if (end - start >= Math.PI * 2 - 0.0001) {
@@ -52,25 +61,17 @@ function StatusDonut({ rows }: { rows: SKU[] }) {
   return (
     <div className="card hero donut-card">
       <svg width={160} height={160} viewBox="0 0 160 160">
-        {counts.map(({ k, count }) => {
-          if (count === 0) return null
-          const span = (count / total) * Math.PI * 2
-          const start = acc
-          const end = acc + span - 0.012
-          acc += span
-          const op = hover ? (hover === k ? 1 : 0.25) : 1
-          return (
-            <path
-              key={k}
-              d={arcPath(start, end)}
-              fill={STATUS_META[k].color}
-              opacity={op}
-              style={{ transition: 'opacity .15s ease', cursor: 'pointer' }}
-              onMouseEnter={() => setHover(k)}
-              onMouseLeave={() => setHover(null)}
-            />
-          )
-        })}
+        {slices.map(({ k, start, end }) => (
+          <path
+            key={k}
+            d={arcPath(start, end)}
+            fill={STATUS_META[k].color}
+            opacity={hover ? (hover === k ? 1 : 0.25) : 1}
+            style={{ transition: 'opacity .15s ease', cursor: 'pointer' }}
+            onMouseEnter={() => setHover(k)}
+            onMouseLeave={() => setHover(null)}
+          />
+        ))}
         <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', fill: 'var(--text-primary)' }}>
           {total}
         </text>

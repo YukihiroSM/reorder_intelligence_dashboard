@@ -17,12 +17,12 @@ export function StatusBadge({ status, large }: { status: StockStatus; large?: bo
 /* ===== Sparkline ===== (ported from design atoms.jsx)
    30 daily bars + 7d moving average, colored by trend; trailing zeros (stockout)
    override to red, leading zeros (launch) to gray. */
-export interface TrendInfo {
+interface TrendInfo {
   dir: Trend
   delta: number
 }
 
-export function trendOf(data: number[]): TrendInfo {
+function trendOf(data: number[]): TrendInfo {
   const nonZero = data.filter((v) => v > 0)
   if (nonZero.length < 8) return { dir: 'flat', delta: 0 }
   const half = Math.floor(nonZero.length / 2)
