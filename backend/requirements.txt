@@ -1,0 +1,15 @@
+# Runtime dependencies. See requirements-dev.txt for test/lint tooling.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy[asyncio]>=2.0
+asyncpg>=0.30
+alembic>=1.13
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+
+# LLM via LangChain for provider-agnostic switching (currently OpenAI gpt-5.4-nano).
+# To add another provider, install its langchain-<provider> package; no code change.
+langchain>=0.3
+langchain-openai>=0.2
+langgraph>=0.2

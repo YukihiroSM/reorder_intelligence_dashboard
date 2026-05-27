@@ -1,0 +1,11 @@
+# Dev/test tooling. Install with: pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest>=8.0
+pytest-asyncio>=0.23
+httpx>=0.27
+ruff>=0.6
+mypy>=1.11
+
+# DB-backed test infrastructure (Phase 2) added when the importer lands:
+# testcontainers[postgres]  OR  pytest-postgresql
