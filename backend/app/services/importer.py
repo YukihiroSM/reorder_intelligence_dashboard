@@ -26,7 +26,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import SKU, Category, ImportRun, SKUSalesDaily, SKUSnapshot, Supplier
-from ..models.enums import ImportStatus
+from ..enums import ImportStatus
 from ..schemas.importing import InventoryFileSchema, SKUInput
 
 logger = logging.getLogger(__name__)
@@ -211,10 +211,6 @@ async def _ingest_one(
             name=item.name,
             category_id=category.id,
             supplier_id=supplier.id,
-            cost_per_unit_usd=item.cost_per_unit_usd,
-            retail_price_usd=item.retail_price_usd,
-            moq=item.moq,
-            current_stock=item.current_stock,
         )
         session.add(sku)
         await session.flush()
@@ -224,10 +220,6 @@ async def _ingest_one(
         sku.name = item.name
         sku.category_id = category.id
         sku.supplier_id = supplier.id
-        sku.cost_per_unit_usd = item.cost_per_unit_usd
-        sku.retail_price_usd = item.retail_price_usd
-        sku.moq = item.moq
-        sku.current_stock = item.current_stock
         run.skus_updated += 1
 
     # --- Snapshot upsert; RETURNING (xmax = 0) tells insert vs update -----
@@ -240,7 +232,6 @@ async def _ingest_one(
             cost_per_unit_usd=item.cost_per_unit_usd,
             retail_price_usd=item.retail_price_usd,
             moq=item.moq,
-            confidence_flags=[],  # computed at read-time (Phase 3/4)
             import_run_id=run.id,
         )
         .on_conflict_do_update(

@@ -20,7 +20,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
@@ -50,10 +50,8 @@ class SKU(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category_id: Mapped[uuid.UUID] = mapped_column(_fk("categories.id"), nullable=False)
     supplier_id: Mapped[uuid.UUID] = mapped_column(_fk("suppliers.id"), nullable=False)
-    cost_per_unit_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    retail_price_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    moq: Mapped[int] = mapped_column(Integer, nullable=False)
-    current_stock: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Time-varying state (stock/cost/retail/moq) lives only on SKUSnapshot — the
+    # single source of truth. The SKU row is just identity + references.
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true")
     )
@@ -95,9 +93,6 @@ class SKUSnapshot(Base):
     cost_per_unit_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     retail_price_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     moq: Mapped[int] = mapped_column(Integer, nullable=False)
-    confidence_flags: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, server_default=text("'[]'::jsonb")
-    )
     import_run_id: Mapped[uuid.UUID] = mapped_column(
         _fk("import_runs.id"), nullable=False
     )

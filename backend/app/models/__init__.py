@@ -5,17 +5,11 @@ from __future__ import annotations
 from ..db import Base
 from .ai import AISuggestion
 from .config import AppConfig, SavedScenario
-from .enums import (
-    AIActionType,
-    ConfidenceFlag,
-    ImportStatus,
-    ScenarioKind,
-    StockHealthStatus,
-)
 from .importing import ImportRun
 from .reference import Category, Supplier
 from .sku import SKU, SKUSalesDaily, SKUSnapshot
 
+# Enums live in app.enums (db-free, single canonical path) — not re-exported here.
 __all__ = [
     "Base",
     "Category",
@@ -27,9 +21,4 @@ __all__ = [
     "SavedScenario",
     "ImportRun",
     "AISuggestion",
-    "StockHealthStatus",
-    "ImportStatus",
-    "ConfidenceFlag",
-    "AIActionType",
-    "ScenarioKind",
 ]

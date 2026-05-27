@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import SKU, ImportRun, SKUSalesDaily, SKUSnapshot
-from app.models.enums import ImportStatus
+from app.enums import ImportStatus
 from app.scripts.generate_inventories import build_variant
 from app.services.importer import import_inventory
 

@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..models.enums import ImportStatus
+from ..enums import ImportStatus
 
 
 class InventoryConfigSchema(BaseModel):

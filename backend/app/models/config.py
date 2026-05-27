@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
-from .enums import ScenarioKind
+from ..enums import ScenarioKind
 
 
 class AppConfig(Base):

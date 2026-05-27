@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
-from .enums import AIActionType
+from ..enums import AIActionType
 
 if TYPE_CHECKING:
     from .sku import SKU

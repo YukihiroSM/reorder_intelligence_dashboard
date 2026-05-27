@@ -58,10 +58,6 @@ CREATE TABLE "skus" (
   "name" varchar(255) NOT NULL,
   "category_id" uuid NOT NULL,
   "supplier_id" uuid NOT NULL,
-  "cost_per_unit_usd" numeric(10,2) NOT NULL,
-  "retail_price_usd" numeric(10,2) NOT NULL,
-  "moq" integer NOT NULL,
-  "current_stock" integer NOT NULL,
   "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now())
@@ -75,7 +71,6 @@ CREATE TABLE "sku_snapshots" (
   "cost_per_unit_usd" numeric(10,2) NOT NULL,
   "retail_price_usd" numeric(10,2) NOT NULL,
   "moq" integer NOT NULL,
-  "confidence_flags" jsonb NOT NULL DEFAULT ('[]'::jsonb),
   "import_run_id" uuid NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
@@ -204,19 +199,13 @@ COMMENT ON COLUMN "suppliers"."production_lead_days" IS 'default production lead
 
 COMMENT ON COLUMN "suppliers"."shipping_days" IS 'default shipping time';
 
-COMMENT ON TABLE "skus" IS 'current_stock is denormalized from latest sku_snapshot for query speed. Trigger or app-level keeps in sync.';
+COMMENT ON TABLE "skus" IS 'Identity + references only. All time-varying state (stock/cost/retail/moq) lives on sku_snapshots, the single source of truth.';
 
 COMMENT ON COLUMN "skus"."sku_code" IS 'business key from JSON: GLW-001 etc.';
-
-COMMENT ON COLUMN "skus"."moq" IS 'minimum order quantity';
-
-COMMENT ON COLUMN "skus"."current_stock" IS 'mirrors latest snapshot for fast queries';
 
 COMMENT ON TABLE "sku_snapshots" IS 'unique(sku_id, snapshot_date) забезпечує дедуп: повторний імпорт того ж дня не плодить рядки';
 
 COMMENT ON COLUMN "sku_snapshots"."snapshot_date" IS 'data date from import (config.today), NOT wall clock';
-
-COMMENT ON COLUMN "sku_snapshots"."confidence_flags" IS 'array of confidence_flag values for this snapshot';
 
 COMMENT ON TABLE "sku_sales_daily" IS 'INSERT ON CONFLICT (sku_id, sale_date) DO NOTHING — основний дедуп при імпорті';
 
