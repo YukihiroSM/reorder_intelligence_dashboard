@@ -37,6 +37,7 @@ def build_calc_config(
     *,
     growth_pct: float | None = None,
     forecast_window: int | None = None,
+    shipping_buffer: int | None = None,
 ) -> CalcConfig:
     """Map the DB AppConfig (or defaults) to a pure CalcConfig, applying overrides."""
     if app_config is None:
@@ -59,6 +60,8 @@ def build_calc_config(
         cfg = replace(cfg, growth_pct=Decimal(str(growth_pct)))
     if forecast_window is not None:
         cfg = replace(cfg, forecast_window_days=forecast_window)
+    if shipping_buffer is not None:
+        cfg = replace(cfg, shipping_buffer_days=shipping_buffer)
     return cfg
 
 
@@ -177,7 +180,7 @@ async def get_all_sku_metrics(
                 shipping_days=ship,
                 sales=sales_by_sku[sku.id][-ANALYSIS_WINDOW:],
                 config=config,
-                include_sales=False,
+                include_sales=True,  # table renders a sparkline per row
             )
         )
     return dtos

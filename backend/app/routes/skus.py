@@ -58,6 +58,7 @@ async def list_skus(
     sort: str = "urgency_desc",
     growth_pct: float | None = None,
     forecast_window: int | None = None,
+    shipping_buffer: int | None = None,
 ) -> list[SKUMetricsDTO]:
     if sort not in _SORTERS:
         raise HTTPException(
@@ -66,7 +67,10 @@ async def list_skus(
         )
     app_config = await session.get(AppConfig, "active")
     config = build_calc_config(
-        app_config, growth_pct=growth_pct, forecast_window=forecast_window
+        app_config,
+        growth_pct=growth_pct,
+        forecast_window=forecast_window,
+        shipping_buffer=shipping_buffer,
     )
     metrics = await get_all_sku_metrics(session, config)
 
@@ -87,10 +91,14 @@ async def get_sku(
     session: AsyncSession = Depends(get_session),
     growth_pct: float | None = None,
     forecast_window: int | None = None,
+    shipping_buffer: int | None = None,
 ) -> SKUMetricsDTO:
     app_config = await session.get(AppConfig, "active")
     config = build_calc_config(
-        app_config, growth_pct=growth_pct, forecast_window=forecast_window
+        app_config,
+        growth_pct=growth_pct,
+        forecast_window=forecast_window,
+        shipping_buffer=shipping_buffer,
     )
     dto = await get_sku_metrics(session, sku_code, config)
     if dto is None:
