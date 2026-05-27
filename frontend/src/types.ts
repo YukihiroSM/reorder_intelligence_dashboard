@@ -100,3 +100,72 @@ export interface ScenarioCreate {
   forecast_window_days: number
   growth_pct: number
 }
+
+// ===== AI advisor (mirrors backend/app/schemas/ai.py) =====
+export type AIAction =
+  | 'ORDER_NOW'
+  | 'EXPEDITE'
+  | 'ORDER_SOON'
+  | 'WAIT'
+  | 'REDUCE_ORDER'
+  | 'INVESTIGATE'
+  | 'DISCONTINUE'
+export type AIConfidence = 'HIGH' | 'MEDIUM' | 'LOW'
+export type AIStatusKind = 'ok' | 'fallback'
+
+export interface AISuggestion {
+  sku_code: string
+  action: AIAction
+  urgency: number
+  headline: string
+  reasoning: string
+  suggested_po_qty: number | null
+  revenue_at_risk_usd: number
+  confidence: AIConfidence
+  warnings: string[]
+  model_name: string
+  tokens_input: number | null
+  tokens_output: number | null
+  generated_at: string
+  cached: boolean
+  ai_status: AIStatusKind
+}
+
+export interface BriefingAction {
+  sku_code: string
+  action: AIAction
+  urgency: number
+  headline: string
+  why_now: string
+}
+
+export interface BriefingWatch {
+  sku_code: string
+  note: string
+}
+
+export interface WeeklyBriefing {
+  summary: string
+  top_actions: BriefingAction[]
+  watch_list: BriefingWatch[]
+  total_cash_to_commit_usd: number
+  total_revenue_at_risk_usd: number
+  actionable_count: number
+  status_counts: Record<string, number>
+  scenario: {
+    growth_pct: number
+    forecast_window_days: number
+    shipping_buffer_days: number
+  }
+  model_name: string
+  tokens_input: number | null
+  tokens_output: number | null
+  generated_at: string
+  cached: boolean
+  ai_status: AIStatusKind
+}
+
+export interface AIStatus {
+  ai_enabled: boolean
+  model: string
+}

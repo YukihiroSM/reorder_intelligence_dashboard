@@ -96,6 +96,58 @@ table.inv thead th {
   opacity: 1;
 }
 
+/* Settings stepper (critical/low threshold controls). */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stepper button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.stepper button:hover:not(:disabled) { background: var(--hover-bg); color: var(--text-primary); }
+.stepper button:disabled { opacity: 0.35; cursor: default; }
+.stepper-val {
+  min-width: 42px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Transient toast (bottom-center, above drawers). */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: 90vw;
+  background: var(--text-primary);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 11px 16px;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  animation: toast-in 0.18s ease;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 /* Keyboard focus visibility across interactive elements. */
 button:focus-visible,
 a:focus-visible,
@@ -103,4 +155,226 @@ input:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+
+/* ===== AI: extra action-badge variants (base styles live in index.css) ===== */
+.action-badge.expedite {
+  background: var(--stockout-accent);
+  color: #fff;
+}
+.action-badge.order_soon { background: var(--critical-bg); color: var(--critical-fg); }
+.action-badge.reduce_order { background: var(--low-bg); color: var(--low-fg); }
+.action-badge.discontinue { background: #E7E5E4; color: #57534E; }
+
+/* Confidence chip (drawer + reused). */
+.conf-chip {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.conf-chip.high { background: var(--healthy-bg); color: var(--healthy-fg); }
+.conf-chip.medium { background: var(--low-bg); color: var(--low-fg); }
+.conf-chip.low { background: var(--stockout-bg); color: var(--stockout-fg); }
+
+/* AI card: headline + grounded figures. */
+.ai-headline {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 10px 0 6px;
+  line-height: 1.4;
+}
+.ai-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ai-fig {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+.ai-fig.crit { color: var(--stockout-fg); border-color: var(--stockout-bg); background: var(--stockout-bg); }
+.ai-fig em { font-style: normal; font-weight: 400; color: var(--text-tertiary); margin-left: 4px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
+/* ===== Slim AI briefing banner (opens the full sheet) ===== */
+.ai-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, var(--surface) 0%, #FCFCFB 100%);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+.ai-banner:hover {
+  border-color: #C9C5C0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.ai-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1C1917, #44403C);
+  color: #fff;
+  flex-shrink: 0;
+}
+.ai-banner-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.ai-banner-scn {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+.ai-banner-mid {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-banner-mid.muted { color: var(--text-tertiary); }
+.ai-banner-stale {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--critical-fg);
+  background: var(--critical-bg);
+  border-radius: 999px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+.ai-banner-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ai-banner:hover .ai-banner-cta { color: var(--healthy-accent); }
+
+/* Briefing sheet: narrower than the SKU drawer (560px); when a SKU is open it
+ * slides left to sit flush against it, so summary + SKU detail show side by side. */
+.drawer.briefing-drawer {
+  width: 480px;
+  transition: transform 0.22s cubic-bezier(0.2, 0.6, 0.2, 1),
+    right 0.22s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.drawer.briefing-drawer.with-sku { right: 560px; }
+@media (max-width: 1080px) {
+  /* Not enough room for two panels — the SKU drawer overlays the briefing. */
+  .drawer.briefing-drawer.with-sku { right: 0; }
+}
+
+.briefing-stale {
+  font-size: 12px;
+  color: var(--critical-fg);
+  background: var(--critical-bg);
+  border-radius: 5px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+}
+.briefing-summary {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+.briefing-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 16px;
+}
+.bstat { display: flex; flex-direction: column; gap: 3px; }
+.bstat-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+.bstat-value { font-family: var(--font-mono); font-size: 19px; font-weight: 600; color: var(--text-primary); }
+.bstat-value.crit { color: var(--stockout-fg); }
+
+.briefing-actions { display: flex; flex-direction: column; gap: 8px; }
+.baction {
+  text-align: left;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 11px 13px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.baction:hover { border-color: var(--border-default); background: var(--bg); }
+.baction-top { display: flex; align-items: center; gap: 10px; }
+.baction-code { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.baction-top .urgency-dots { margin-left: 4px; }
+.baction-arrow { margin-left: auto; color: var(--text-tertiary); }
+.baction-headline { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 7px; }
+.baction-why { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-top: 3px; }
+
+.briefing-watch { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.briefing-watch-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.bwatch {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 0;
+  cursor: pointer;
+}
+.bwatch:hover .bwatch-code { text-decoration: underline; }
+.bwatch-code { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); flex-shrink: 0; }
+.bwatch-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+
+.briefing-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
 }

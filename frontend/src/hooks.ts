@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import {
+  getAIStatus,
   getConfig,
   getHealth,
   getSKU,
@@ -51,4 +52,10 @@ export function useHealth() {
 
 export function useScenarios() {
   return useQuery({ queryKey: ['scenarios'], queryFn: getScenarios })
+}
+
+// Whether a live LLM is configured (so the UI can label fallback mode). Rarely
+// changes, so cache it for the session.
+export function useAIStatus() {
+  return useQuery({ queryKey: ['ai-status'], queryFn: getAIStatus, staleTime: Infinity })
 }

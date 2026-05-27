@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, CircleHelp, Info } from 'lucide-react'
 
 import { FLAG_DEFS } from '../lib/constants'
-import type { StockStatus, Trend } from '../types'
+import type { AIAction, AIConfidence, StockStatus, Trend } from '../types'
 
 /* ===== Info tooltip (small "?" icon, bubble on hover) ===== */
 export function InfoTip({
@@ -32,6 +32,43 @@ export function StatusBadge({ status, large }: { status: StockStatus; large?: bo
     <span className={`status-badge ${status.toLowerCase()}${large ? ' large' : ''}`}>
       <span className="dot" />
       {status}
+    </span>
+  )
+}
+
+/* ===== AI action badge + urgency + confidence (shared: briefing + drawer) ===== */
+const ACTION_LABELS: Record<AIAction, string> = {
+  ORDER_NOW: 'Order now',
+  EXPEDITE: 'Expedite',
+  ORDER_SOON: 'Order soon',
+  WAIT: 'Wait',
+  REDUCE_ORDER: 'Reduce order',
+  INVESTIGATE: 'Investigate',
+  DISCONTINUE: 'Discontinue',
+}
+
+function actionLabel(action: AIAction): string {
+  return ACTION_LABELS[action] ?? action
+}
+
+export function ActionBadge({ action }: { action: AIAction }) {
+  return <span className={`action-badge ${action.toLowerCase()}`}>{actionLabel(action)}</span>
+}
+
+export function UrgencyDots({ urgency }: { urgency: number }) {
+  return (
+    <span className="urgency-dots" title={`Urgency ${urgency}/5`} aria-label={`Urgency ${urgency} of 5`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={`d ${i <= urgency ? 'on' : ''}`} />
+      ))}
+    </span>
+  )
+}
+
+export function ConfidenceChip({ confidence }: { confidence: AIConfidence }) {
+  return (
+    <span className={`conf-chip ${confidence.toLowerCase()}`} title={`Model confidence: ${confidence}`}>
+      {confidence.toLowerCase()} confidence
     </span>
   )
 }

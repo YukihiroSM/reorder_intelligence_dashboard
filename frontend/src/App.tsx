@@ -5,7 +5,8 @@ import { PortfolioHealthSection } from './components/PortfolioHealth'
 import { SKUDrawer } from './components/SKUDrawer'
 import { StickyBar } from './components/StickyBar'
 import { ThisWeekSection } from './components/ThisWeek'
-import { useHealth, useSKUs } from './hooks'
+import { WeeklyBriefingSection } from './components/WeeklyBriefing'
+import { useAIStatus, useHealth, useSKUs } from './hooks'
 import { DEFAULT_SCENARIO } from './lib/constants'
 import type { Scenario } from './types'
 
@@ -29,6 +30,7 @@ function App() {
     () => new URLSearchParams(window.location.search).get('sku'),
   )
   const health = useHealth()
+  const aiStatus = useAIStatus()
   const skus = useSKUs(scenario)
   const rows = skus.data ?? []
   const dataDate = health.data?.data_date ?? null
@@ -84,6 +86,12 @@ function App() {
               onOpenSku={setSelectedSku}
               onScrollToTable={() => scrollToId('inventory')}
               onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}
+            />
+            <WeeklyBriefingSection
+              scenario={scenario}
+              aiEnabled={aiStatus.data?.ai_enabled ?? false}
+              skuOpen={!!selectedSku}
+              onOpenSku={setSelectedSku}
             />
             <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
             <InventoryTable

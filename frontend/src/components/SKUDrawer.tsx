@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { History, Plus, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
+import { Plus, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react'
 
+import { suggestAction } from '../api/api'
 import { FLAG_DEFS } from '../lib/constants'
 import { daysAgo, money, num, shortDate } from '../lib/format'
-import type { SKU } from '../types'
-import { FlagChip, StatusBadge } from './atoms'
+import { useBodyScrollLock } from '../lib/scrollLock'
+import type { Scenario, SKU } from '../types'
+import { ActionBadge, ConfidenceChip, FlagChip, StatusBadge, UrgencyDots } from './atoms'
 
 /* ===== Sales trend chart: daily bars + MA7 (solid) + MA14 (dashed) ===== */
 function SalesChart({ data, flags }: { data: number[]; flags: string[] }) {
@@ -149,91 +152,42 @@ function MetricCell({
   )
 }
 
-/* ===== AI recommendation card ===== Phase 6: synthesized from the real row
-   metrics (an honest preview). Phase 7 swaps this for the live LLM endpoint. */
-interface AIResult {
-  action: 'ORDER_NOW' | 'INVESTIGATE' | 'WAIT'
-  urgency: number
-  reasoning: string
-  warnings: string[]
-}
+/* ===== AI recommendation card ===== Live LLM (LangGraph) endpoint, scenario-aware.
+   Resets when the SKU or scenario changes so a stale rec never lingers. */
+function AIBlock({ sku, scenario }: { sku: SKU; scenario: Scenario }) {
+  const gen = useMutation({
+    mutationFn: (force: boolean) => suggestAction(sku.sku_code, scenario, force),
+  })
+  // Clear the recommendation when the SKU or the scenario it was reasoned under changes.
+  const scenarioKey = `${scenario.growth}|${scenario.forecastDays}|${scenario.leadBuffer}`
+  useEffect(() => {
+    gen.reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sku.sku_code, scenarioKey])
 
-function synthesize(r: SKU): AIResult {
-  const days = r.days_of_stock
-  const lead = r.total_lead_days
-  const lost = Math.round(r.velocity_14d * r.retail_price_usd)
-  if (r.status === 'STOCKOUT') {
-    return {
-      action: 'ORDER_NOW',
-      urgency: 5,
-      reasoning: `SKU is <mark>actively stocked out</mark>. Order the MOQ of ${r.moq.toLocaleString()} immediately — every day stocked out forgoes ~<mark>${money(lost)}/day</mark> in revenue. Stockout-aware velocity is ${num(r.effective_velocity)}/day.`,
-      warnings: ['Active stockout — revenue is being lost daily until stock lands.'],
-    }
-  }
-  if (days !== null && days <= lead) {
-    return {
-      action: 'ORDER_NOW',
-      urgency: 4,
-      reasoning: `Only <mark>${num(days)} days</mark> of stock against a <mark>${lead}-day lead</mark> — a stockout window is unavoidable unless you expedite. Place the PO of ${r.recommended_po_qty.toLocaleString()} now.`,
-      warnings: [`Stockout likely before the next shipment lands (~${Math.max(0, Math.round(lead - days))}d gap).`],
-    }
-  }
-  if (days !== null && days <= lead + 14) {
-    return {
-      action: 'INVESTIGATE',
-      urgency: 3,
-      reasoning: `${Math.round(days)} days of stock — workable, but the <mark>${lead}-day lead</mark> leaves limited slack. Consider ordering this cycle to stay safe.`,
-      warnings: [],
-    }
-  }
-  const horizon = days === null ? 'ample' : `${Math.round(days)} days`
-  return {
-    action: 'WAIT',
-    urgency: 1,
-    reasoning: `${horizon} of stock against a ${lead}-day lead. No action needed this week.`,
-    warnings: [],
-  }
-}
+  const r = gen.data
 
-function AIBlock({ sku }: { sku: SKU }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'result'>('idle')
-  const [result, setResult] = useState<AIResult | null>(null)
-  // Reset when the drawer switches SKUs (adjust-state-during-render pattern).
-  const [forSku, setForSku] = useState(sku.sku_code)
-  if (sku.sku_code !== forSku) {
-    setForSku(sku.sku_code)
-    setState('idle')
-    setResult(null)
-  }
-
-  function generate() {
-    setState('loading')
-    setTimeout(() => {
-      setResult(synthesize(sku))
-      setState('result')
-    }, 1200 + Math.random() * 400)
-  }
-
-  if (state === 'idle') {
+  if (!r && !gen.isPending && !gen.isError) {
     return (
       <div className="ai-card">
-        <button className="ai-button" onClick={generate}>
+        <button className="ai-button" onClick={() => gen.mutate(false)}>
           <Sparkles size={14} />
           Get AI recommendation
         </button>
         <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>
-          Re-runs against the current scenario
+          Reasons over this SKU under the current scenario
+          {scenario.growth !== 0 ? ` (${scenario.growth > 0 ? '+' : ''}${scenario.growth}%)` : ''}
         </div>
       </div>
     )
   }
 
-  if (state === 'loading') {
+  if (gen.isPending) {
     return (
       <div className="ai-card expanded">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
           <Sparkles size={13} />
-          <span>Analyzing…</span>
+          <span>Reasoning…</span>
         </div>
         <div className="ai-skeleton">
           <div className="line l1" />
@@ -244,21 +198,46 @@ function AIBlock({ sku }: { sku: SKU }) {
     )
   }
 
-  const r = result as AIResult
+  if (gen.isError || !r) {
+    return (
+      <div className="ai-card expanded">
+        <div className="ai-warning">
+          <TriangleAlert size={13} />
+          <span>Couldn't get a recommendation. Is the API running?</span>
+        </div>
+        <div className="ai-footer">
+          <span>&nbsp;</span>
+          <button className="refresh" onClick={() => gen.mutate(false)}>
+            <RefreshCw size={10} /> Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="ai-card expanded">
       <div className="ai-action-row">
-        <span className={`action-badge ${r.action.toLowerCase()}`}>{r.action.replace('_', ' ')}</span>
-        <span className="urgency-dots" title={`Urgency ${r.urgency}/5`}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <span key={i} className={`d ${i <= r.urgency ? 'on' : ''}`} />
-          ))}
-        </span>
-        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>
-          urgency {r.urgency}/5
-        </span>
+        <ActionBadge action={r.action} />
+        <UrgencyDots urgency={r.urgency} />
+        <ConfidenceChip confidence={r.confidence} />
       </div>
-      <div className="ai-reason" dangerouslySetInnerHTML={{ __html: r.reasoning }} />
+      <div className="ai-headline">{r.headline}</div>
+      <div className="ai-reason">{r.reasoning}</div>
+
+      <div className="ai-figures">
+        {r.revenue_at_risk_usd > 0 && (
+          <span className="ai-fig crit">
+            {money(r.revenue_at_risk_usd)} <em>revenue at risk</em>
+          </span>
+        )}
+        {r.suggested_po_qty != null && (
+          <span className="ai-fig">
+            {r.suggested_po_qty.toLocaleString()} <em>suggested PO</em>
+          </span>
+        )}
+      </div>
+
       {r.warnings.length > 0 && (
         <div style={{ marginTop: 10 }}>
           {r.warnings.map((w, i) => (
@@ -270,8 +249,11 @@ function AIBlock({ sku }: { sku: SKU }) {
         </div>
       )}
       <div className="ai-footer">
-        <span>preview · derived from metrics</span>
-        <button className="refresh" onClick={generate}>
+        <span>
+          {r.ai_status === 'fallback' ? 'deterministic' : r.model_name}
+          {r.cached ? ' · cached' : ' · fresh'}
+        </span>
+        <button className="refresh" onClick={() => gen.mutate(true)}>
           <RefreshCw size={10} /> Refresh
         </button>
       </div>
@@ -293,6 +275,7 @@ export function SKUDrawer({
 }) {
   const open = !!sku
   const [expandedFlag, setExpandedFlag] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   // Hold the last SKU so content stays during the close animation; update
   // during render whenever a (new) SKU is selected.
   const [shown, setShown] = useState<SKU | null>(sku)
@@ -304,14 +287,7 @@ export function SKUDrawer({
     setExpandedFlag(null)
   }
 
-  useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [open])
+  useBodyScrollLock(open)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -320,6 +296,13 @@ export function SKUDrawer({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  // Transient confirmation toast (e.g. the not-yet-built PO export).
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2800)
+    return () => clearTimeout(t)
+  }, [toast, setToast])
 
   const r = shown
   const factor = 1 + scenario.growth / 100
@@ -457,21 +440,28 @@ export function SKUDrawer({
                 <div className="drawer-section-title">
                   <span>AI recommendation</span>
                 </div>
-                <AIBlock sku={r} />
+                <AIBlock sku={r} scenario={scenario} />
               </div>
             </div>
 
             <div className="drawer-footer">
-              <button className="btn btn-primary">
+              <button
+                className="btn btn-primary"
+                onClick={() =>
+                  setToast(`PO export coming next — CSV / email-ready PO for ${r.sku_code}.`)
+                }
+              >
                 <Plus size={12} strokeWidth={2.4} /> Generate PO · {money(r.estimated_reorder_cost)}
-              </button>
-              <button className="btn btn-ghost" style={{ fontSize: 12 }}>
-                <History size={12} /> AI history
               </button>
             </div>
           </>
         )}
       </aside>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </>
   )
 }

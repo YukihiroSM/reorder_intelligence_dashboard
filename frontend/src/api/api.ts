@@ -1,4 +1,6 @@
 import type {
+  AISuggestion,
+  AIStatus,
   AppConfig,
   Health,
   SKU,
@@ -6,6 +8,7 @@ import type {
   Scenario,
   ScenarioCreate,
   ScenarioSaved,
+  WeeklyBriefing,
 } from '../types'
 import { client } from './client'
 
@@ -89,4 +92,35 @@ export async function createScenario(payload: ScenarioCreate): Promise<ScenarioS
 
 export async function deleteScenario(id: string): Promise<void> {
   await client.delete(`/api/scenarios/${id}`)
+}
+
+// ===== AI advisor =====
+// All AI calls take the same scenario overrides as /api/skus, so the LLM reasons
+// under the active scenario. `force` bypasses the server-side context-hash cache.
+export async function getAIStatus(): Promise<AIStatus> {
+  const { data } = await client.get<AIStatus>('/api/ai/status')
+  return data
+}
+
+export async function suggestAction(
+  code: string,
+  scenario: Scenario,
+  force = false,
+): Promise<AISuggestion> {
+  const { data } = await client.post<AISuggestion>(
+    '/api/ai/suggest-action',
+    { sku_code: code },
+    { params: { ...scenarioParams(scenario), force } },
+  )
+  return data
+}
+
+export async function getWeeklyBriefing(
+  scenario: Scenario,
+  force = false,
+): Promise<WeeklyBriefing> {
+  const { data } = await client.post<WeeklyBriefing>('/api/ai/briefing', null, {
+    params: { ...scenarioParams(scenario), force },
+  })
+  return data
 }
