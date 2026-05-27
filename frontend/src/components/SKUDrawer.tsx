@@ -297,6 +297,12 @@ export function SKUDrawer({
   // during render whenever a (new) SKU is selected.
   const [shown, setShown] = useState<SKU | null>(sku)
   if (sku && sku !== shown) setShown(sku)
+  // Reset the open flag explanation when switching SKUs (else a stale panel lingers).
+  const [flagForSku, setFlagForSku] = useState<string | null>(sku?.sku_code ?? null)
+  if (sku && sku.sku_code !== flagForSku) {
+    setFlagForSku(sku.sku_code)
+    setExpandedFlag(null)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -422,7 +428,7 @@ export function SKUDrawer({
                       <FlagChip key={f} flag={f} onClick={() => setExpandedFlag((e) => (e === f ? null : f))} />
                     ))}
                   </div>
-                  {expandedFlag && FLAG_DEFS[expandedFlag] && (
+                  {expandedFlag && r.confidence_flags.includes(expandedFlag) && FLAG_DEFS[expandedFlag] && (
                     <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border-subtle)', borderRadius: 4, fontSize: 12.5, color: 'var(--text-secondary)' }}>
                       <strong style={{ color: 'var(--text-primary)' }}>{FLAG_DEFS[expandedFlag].label}.</strong>{' '}
                       {FLAG_DEFS[expandedFlag].explain}
