@@ -28,6 +28,12 @@
   }
 }
 
+/* Table header scrolls with the table instead of sticking to the viewport. */
+table.inv thead th {
+  position: static;
+  top: auto;
+}
+
 /* Keyboard focus visibility across interactive elements. */
 button:focus-visible,
 a:focus-visible,
