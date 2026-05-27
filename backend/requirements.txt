@@ -1,6 +1,7 @@
 # Runtime dependencies. See requirements-dev.txt for test/lint tooling.
 fastapi>=0.115
 uvicorn[standard]>=0.30
+python-multipart>=0.0.9   # multipart/form-data uploads for POST /api/import
 sqlalchemy[asyncio]>=2.0
 asyncpg>=0.30
 alembic>=1.13
