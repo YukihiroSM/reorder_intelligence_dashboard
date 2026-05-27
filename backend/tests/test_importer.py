@@ -95,3 +95,28 @@ async def test_invalid_json_raises(session: AsyncSession, tmp_path: Path) -> Non
     bad.write_text("{ not valid json")
     with pytest.raises(ValueError):
         await import_inventory(session, bad)
+
+
+async def test_partial_failure_isolates_bad_sku(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    """One bad SKU (int4-overflowing stock) is recorded, the other 19 still import."""
+    doc = json.loads(BASE.read_text())
+    target = doc["skus"][0]["sku"]
+    doc["skus"][0]["current_stock"] = 10_000_000_000  # overflows PG integer
+    bad = tmp_path / "inventory_partial.json"
+    bad.write_text(json.dumps(doc))
+
+    result = await import_inventory(session, bad)
+
+    assert result.skipped is False
+    assert result.run.status == ImportStatus.PARTIAL
+    assert result.run.error_log is not None
+    assert any(e["sku"] == target for e in result.run.error_log)
+
+    # The other 19 SKUs persisted fully; the bad one left nothing behind.
+    assert result.run.skus_created == 19
+    assert await _count(session, SKU) == 19
+    assert await _count(session, SKUSnapshot) == 19
+    assert await _count(session, SKUSalesDaily) == 19 * 30
+    assert await session.scalar(select(SKU).where(SKU.sku_code == target)) is None

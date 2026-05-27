@@ -1,13 +1,6 @@
 """Golden tests for the pure calculation core, against the real inventory.json.
 
 `today` is locked to the dataset's config.today (2026-05-25).
-
-NOTE — two expectations differ from IMPLEMENTATION_PLAN.md, which had arithmetic
-errors vs the brief's formula (confirmed with the user, "follow the formula"):
-  * GLW-001 is CRITICAL, not HEALTHY: 1240 stock / ~80/day = ~15 days < 49-day
-    lead. It is still flag-free (steady data). VTC-501 is the genuine
-    HEALTHY + no-flags baseline.
-  * GLW-005's PO is demand-bound (~34/day x 60 ≈ 2058), not MOQ-bound at 500.
 """
 
 from __future__ import annotations

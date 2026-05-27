@@ -124,6 +124,34 @@ async def import_inventory(session: AsyncSession, file_path: Path | str) -> Impo
     return ImportResult(run=run, skipped=False)
 
 
+async def _ensure_reference_data(
+    session: AsyncSession,
+    parsed: InventoryFileSchema,
+    cats: dict[str, Category],
+    sups: dict[str, Supplier],
+) -> None:
+    """Create any missing categories/suppliers up front, in the outer transaction.
+
+    Reference data is shared across SKUs, so it must NOT live inside a per-SKU
+    savepoint — otherwise rolling back one bad SKU could revert a category that
+    other SKUs depend on (and leave a dangling cache entry)."""
+    for item in parsed.skus:
+        code = category_code(item.category)
+        if code not in cats:
+            category = Category(code=code, name=item.category)
+            session.add(category)
+            cats[code] = category
+        if item.supplier not in sups:
+            supplier = Supplier(
+                name=item.supplier,
+                production_lead_days=item.production_lead_days,
+                shipping_days=item.shipping_days,
+            )
+            session.add(supplier)
+            sups[item.supplier] = supplier
+    await session.flush()
+
+
 async def _ingest_skus(
     session: AsyncSession,
     run: ImportRun,
@@ -134,13 +162,29 @@ async def _ingest_skus(
     cats = {c.code: c for c in (await session.scalars(select(Category))).all()}
     sups = {s.name: s for s in (await session.scalars(select(Supplier))).all()}
     skus = {s.sku_code: s for s in (await session.scalars(select(SKU))).all()}
-    errors: list[dict] = []
+    await _ensure_reference_data(session, parsed, cats, sups)
+
+    errors: list[dict[str, str]] = []
+    counter_fields = (
+        "skus_created",
+        "skus_updated",
+        "snapshots_created",
+        "sales_rows_inserted",
+        "sales_rows_skipped",
+    )
 
     for item in parsed.skus:
+        # Each SKU is its own SAVEPOINT: a failure rolls back only that SKU's
+        # rows, leaving the outer transaction usable so the rest still import.
+        before = {f: getattr(run, f) for f in counter_fields}
         try:
-            await _ingest_one(session, run, item, data_date, cats, sups, skus)
+            async with session.begin_nested():
+                await _ingest_one(session, run, item, data_date, cats, sups, skus)
         except Exception as exc:  # noqa: BLE001 - record per-SKU, keep importing
             logger.exception("Failed to import SKU %s", item.sku)
+            for field, value in before.items():  # undo in-memory side effects
+                setattr(run, field, value)
+            skus.pop(item.sku, None)
             errors.append({"sku": item.sku, "error": str(exc)})
 
     if errors:
@@ -156,24 +200,9 @@ async def _ingest_one(
     sups: dict[str, Supplier],
     skus: dict[str, SKU],
 ) -> None:
-    code = category_code(item.category)
-    category = cats.get(code)
-    if category is None:
-        category = Category(code=code, name=item.category)
-        session.add(category)
-        await session.flush()
-        cats[code] = category
-
-    supplier = sups.get(item.supplier)
-    if supplier is None:
-        supplier = Supplier(
-            name=item.supplier,
-            production_lead_days=item.production_lead_days,
-            shipping_days=item.shipping_days,
-        )
-        session.add(supplier)
-        await session.flush()
-        sups[item.supplier] = supplier
+    # Reference data was created in _ensure_reference_data (outside this savepoint).
+    category = cats[category_code(item.category)]
+    supplier = sups[item.supplier]
 
     sku = skus.get(item.sku)
     if sku is None:
