@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Download, History, Settings, X } from 'lucide-react'
+import { Download, History, Settings, X } from 'lucide-react'
 
-import { createScenario, deleteScenario } from '../api/api'
-import { useScenarios } from '../hooks'
+import { createScenario, deleteScenario, updateConfig } from '../api/api'
+import { useConfig, useScenarios } from '../hooks'
 import {
   DEFAULT_SCENARIO,
   FORECAST_WINDOWS,
@@ -20,6 +20,35 @@ function deltaCls(v: number): string {
   return v > 0 ? 'delta-up' : 'delta-dn'
 }
 
+function Stepper({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  disabled,
+}: {
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+  disabled?: boolean
+}) {
+  const clamp = (v: number) => +Math.min(max, Math.max(min, v)).toFixed(2)
+  return (
+    <span className="stepper">
+      <button onClick={() => onChange(clamp(value - step))} disabled={disabled || value <= min} aria-label="decrease">
+        −
+      </button>
+      <span className="stepper-val">{value.toFixed(2)}×</span>
+      <button onClick={() => onChange(clamp(value + step))} disabled={disabled || value >= max} aria-label="increase">
+        +
+      </button>
+    </span>
+  )
+}
+
 export function StickyBar({
   scenario,
   setScenario,
@@ -33,6 +62,20 @@ export function StickyBar({
   const [menu, setMenu] = useState<'history' | 'settings' | null>(null)
   const qc = useQueryClient()
   const scenarios = useScenarios()
+  const config = useConfig()
+
+  // Health thresholds live in app_config (not the scenario query overrides), so a
+  // change must refetch every metric view to recompute statuses.
+  const updateMut = useMutation({
+    mutationFn: updateConfig,
+    onSuccess: () => {
+      for (const key of ['config', 'skus', 'skus-page', 'sku']) {
+        qc.invalidateQueries({ queryKey: [key] })
+      }
+    },
+  })
+  const crit = config.data?.critical_multiplier ?? 1
+  const low = config.data?.low_multiplier ?? 1.5
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4)
@@ -160,24 +203,41 @@ export function StickyBar({
               </button>
               {menu === 'settings' && (
                 <div className="bar-menu">
-                  <div className="bar-menu-head">Display & alerts</div>
-                  <button className="bar-menu-item">
-                    <span>Currency</span>
-                    <span className="bar-menu-mini">
-                      <strong>USD</strong>
-                    </span>
-                  </button>
-                  <button className="bar-menu-item">
-                    <span>Alert threshold</span>
-                    <span className="bar-menu-mini">
-                      <strong>&lt; lead time</strong>
-                    </span>
-                  </button>
+                  <div className="bar-menu-head">Stock-health thresholds</div>
+                  <div className="bar-menu-row">
+                    <div>
+                      <div className="bar-menu-row-title">Critical</div>
+                      <div className="bar-menu-row-sub">days of stock &lt; lead × {crit.toFixed(2)}</div>
+                    </div>
+                    <Stepper
+                      value={crit}
+                      min={0.25}
+                      max={low}
+                      step={0.25}
+                      disabled={config.isPending || updateMut.isPending}
+                      onChange={(v) => updateMut.mutate({ critical_multiplier: v })}
+                    />
+                  </div>
+                  <div className="bar-menu-row">
+                    <div>
+                      <div className="bar-menu-row-title">Low</div>
+                      <div className="bar-menu-row-sub">days of stock &lt; lead × {low.toFixed(2)}</div>
+                    </div>
+                    <Stepper
+                      value={low}
+                      min={crit}
+                      max={4}
+                      step={0.25}
+                      disabled={config.isPending || updateMut.isPending}
+                      onChange={(v) => updateMut.mutate({ low_multiplier: v })}
+                    />
+                  </div>
                   <div className="bar-menu-divider" />
-                  <button className="bar-menu-item">
-                    <span>Suppliers & SKUs</span>
-                    <ArrowRight size={10} />
-                  </button>
+                  <div className="bar-menu-row">
+                    <div className="bar-menu-row-sub" style={{ fontFamily: 'var(--font-sans)' }}>
+                      Applies live to every SKU's status. Currency is USD for this dataset.
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
