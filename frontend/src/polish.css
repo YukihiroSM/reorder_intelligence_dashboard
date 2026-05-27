@@ -34,6 +34,50 @@ table.inv thead th {
   top: auto;
 }
 
+/* Info tooltip: small "?" icon with a bubble that shows on hover/focus. */
+.infotip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 5px;
+  color: var(--text-tertiary);
+  cursor: help;
+}
+.infotip:hover,
+.infotip:focus-visible {
+  color: var(--text-secondary);
+  outline: none;
+}
+.infotip-bubble {
+  position: absolute;
+  top: calc(100% + 7px);
+  background: var(--text-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 7px 9px;
+  border-radius: 5px;
+  width: max-content;
+  max-width: 230px;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 80;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+.infotip-center .infotip-bubble { left: 50%; transform: translateX(-50%); }
+.infotip-left .infotip-bubble { left: 0; }
+.infotip-right .infotip-bubble { right: 0; }
+.infotip:hover .infotip-bubble,
+.infotip:focus-visible .infotip-bubble {
+  opacity: 1;
+}
+
 /* Keyboard focus visibility across interactive elements. */
 button:focus-visible,
 a:focus-visible,

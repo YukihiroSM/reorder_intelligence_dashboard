@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { CATEGORY_COLORS } from '../lib/constants'
 import type { SKU, StockStatus } from '../types'
+import { InfoTip } from './atoms'
 
 const STATUS_META: Record<StockStatus, { label: string; color: string }> = {
   HEALTHY: { label: 'Healthy', color: '#16A34A' },
@@ -154,7 +155,13 @@ function CashHorizon({ rows, forecastDays }: { rows: SKU[]; forecastDays: number
 
   return (
     <div className="card hero" style={{ overflow: 'visible', position: 'relative' }}>
-      <div className="card-tag" style={{ marginBottom: 12 }}>Cash horizon · by week</div>
+      <div className="card-tag" style={{ marginBottom: 12 }}>
+        Cash horizon · by week
+        <InfoTip
+          align="left"
+          text="Projected reorder spend bucketed by the week each SKU's PO falls due, stacked by category. 30/60/90-day totals are shown above."
+        />
+      </div>
       <div className="kpi-strip">
         <div className="item"><div className="l">30d</div><div className="v">{fmt(k30)}</div></div>
         <div className="item"><div className="l">60d</div><div className="v">{fmt(k60)}</div></div>
@@ -283,7 +290,13 @@ function RunwayBars({ rows }: { rows: SKU[] }) {
 
   return (
     <div className="card hero">
-      <div className="card-tag" style={{ marginBottom: 14 }}>Coverage runway · by category</div>
+      <div className="card-tag" style={{ marginBottom: 14 }}>
+        Coverage runway · by category
+        <InfoTip
+          align="left"
+          text="Average days of stock per category at the current (scenario-adjusted) velocity. A striped bar marks a category with an active stockout."
+        />
+      </div>
       <div className="runway-list">
         {entries.map(({ cat, avgDays, hasStockout }) => {
           const isOut = hasStockout && avgDays < 5

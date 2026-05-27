@@ -1,8 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Check, ChevronDown, Info } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, CircleHelp, Info } from 'lucide-react'
 
 import { FLAG_DEFS } from '../lib/constants'
 import type { StockStatus, Trend } from '../types'
+
+/* ===== Info tooltip (small "?" icon, bubble on hover) ===== */
+export function InfoTip({
+  text,
+  align = 'center',
+}: {
+  text: string
+  align?: 'center' | 'left' | 'right'
+}) {
+  return (
+    <span
+      className={`infotip infotip-${align}`}
+      tabIndex={0}
+      onClick={(e) => e.stopPropagation()} // don't trigger header sort
+    >
+      <CircleHelp size={12} />
+      <span className="infotip-bubble" role="tooltip">
+        {text}
+      </span>
+    </span>
+  )
+}
 
 /* ===== Status badge ===== */
 export function StatusBadge({ status, large }: { status: StockStatus; large?: boolean }) {

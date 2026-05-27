@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { useInfiniteSKUs } from '../hooks'
 import { daysAgo, money, num, shortDate } from '../lib/format'
 import type { Scenario, SKU, SortField, StockStatus } from '../types'
-import { Dropdown, FlagPill, Sparkline, StatusBadge } from './atoms'
+import { Dropdown, FlagPill, InfoTip, Sparkline, StatusBadge } from './atoms'
 
 const STATUS_OPTS: StockStatus[] = ['STOCKOUT', 'CRITICAL', 'LOW', 'HEALTHY']
 
@@ -178,22 +178,45 @@ export function InventoryTable({
                   <th scope="col" className={`sortable ${sortBy === 'name' ? 'active' : ''}`} style={{ minWidth: 220 }} aria-sort={ariaSort('name')} onClick={() => toggleSort('name')}>
                     Product {arrow('name')}
                   </th>
-                  <th scope="col" style={{ width: 100 }}>Status</th>
+                  <th scope="col" style={{ width: 100 }}>
+                    Status
+                    <InfoTip text="Healthy / Low / Critical / Stockout — from days of stock vs. total lead time." />
+                  </th>
                   <th scope="col" className={`num sortable ${sortBy === 'stock' ? 'active' : ''}`} style={{ width: 70 }} aria-sort={ariaSort('stock')} onClick={() => toggleSort('stock')}>
                     Stock {arrow('stock')}
                   </th>
-                  <th scope="col" style={{ width: 140 }}>30-day trend</th>
-                  <th scope="col" className="num" style={{ width: 96 }}>7d / 14d</th>
-                  <th scope="col" className="num" style={{ width: 96 }}>Lead · ship</th>
+                  <th scope="col" style={{ width: 140 }}>
+                    30-day trend
+                    <InfoTip text="Daily units over 30 days with a 7-day moving-average line; bar color shows the trend." />
+                  </th>
+                  <th scope="col" className="num" style={{ width: 96 }}>
+                    7d / 14d
+                    <InfoTip text="Average daily sales over the last 7 and 14 days." />
+                  </th>
+                  <th scope="col" className="num" style={{ width: 96 }}>
+                    Lead · ship
+                    <InfoTip text="Supplier production days + shipping days (the lead-time buffer is added on top)." />
+                  </th>
                   <th scope="col" className={`num sortable ${sortBy === 'days' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('days')} onClick={() => toggleSort('days')}>
                     Days left {arrow('days')}
+                    <InfoTip text="Current stock ÷ projected daily velocity. ∞ = no recent demand." />
                   </th>
-                  <th scope="col" style={{ width: 120 }}>Reorder by</th>
-                  <th scope="col" className="num" style={{ width: 110 }}>PO qty</th>
+                  <th scope="col" style={{ width: 120 }}>
+                    Reorder by
+                    <InfoTip text="Latest date to place a PO so it arrives before stockout: today + (days of stock − total lead)." />
+                  </th>
+                  <th scope="col" className="num" style={{ width: 110 }}>
+                    PO qty
+                    <InfoTip align="right" text="max(MOQ, projected velocity × forecast window). 'MOQ' tag = the minimum order is the binding constraint." />
+                  </th>
                   <th scope="col" className={`num sortable ${sortBy === 'cost' ? 'active' : ''}`} style={{ width: 90 }} aria-sort={ariaSort('cost')} onClick={() => toggleSort('cost')}>
                     Cost {arrow('cost')}
+                    <InfoTip align="right" text="Recommended PO quantity × cost per unit." />
                   </th>
-                  <th scope="col" style={{ width: 70 }}>Flags</th>
+                  <th scope="col" style={{ width: 70 }}>
+                    Flags
+                    <InfoTip align="right" text="Confidence flags — data conditions (stockout, launch, volatility…) that make the forecast less reliable." />
+                  </th>
                 </tr>
               </thead>
               <tbody>
