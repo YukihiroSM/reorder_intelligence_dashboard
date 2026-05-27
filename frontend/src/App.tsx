@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { StatusBadge, Sparkline } from './components/atoms'
+import { PortfolioHealthSection } from './components/PortfolioHealth'
 import { StickyBar } from './components/StickyBar'
 import { ThisWeekSection } from './components/ThisWeek'
 import { useHealth, useSKUs } from './hooks'
@@ -53,6 +54,8 @@ function App() {
           onScrollToTable={() => scrollToId('inventory')}
           onScrollToCashflow={() => scrollToId('cash-horizon-anchor', true)}
         />
+
+        <PortfolioHealthSection rows={rows} forecastDays={scenario.forecastDays} />
 
         {/* Temporary table — replaced by the full InventoryTable in 6.5. */}
         <section className="section" id="inventory">
