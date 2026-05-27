@@ -412,6 +412,22 @@ export function SKUDrawer({
                   />
                   <MetricCell label="Recommended PO" value={r.recommended_po_qty.toLocaleString()} caption={r.moq_binding ? 'MOQ bound' : 'above MOQ'} />
                   <MetricCell label="PO cost" value={money(r.estimated_reorder_cost)} caption={`${r.recommended_po_qty.toLocaleString()} × $${r.cost_per_unit_usd.toFixed(2)}`} />
+                  <MetricCell
+                    label="Retail / unit"
+                    value={`$${r.retail_price_usd.toFixed(2)}`}
+                    caption="list price"
+                  />
+                  <MetricCell
+                    label="Stock value"
+                    value={money(r.current_stock * r.retail_price_usd)}
+                    caption={`${r.current_stock.toLocaleString()} × $${r.retail_price_usd.toFixed(2)} retail`}
+                    formula={`${r.current_stock.toLocaleString()} × $${r.retail_price_usd.toFixed(2)} = ${money(r.current_stock * r.retail_price_usd)}`}
+                  />
+                  <MetricCell
+                    label="Gross margin"
+                    value={`${r.retail_price_usd > 0 ? Math.round(((r.retail_price_usd - r.cost_per_unit_usd) / r.retail_price_usd) * 100) : 0}%`}
+                    caption={`$${(r.retail_price_usd - r.cost_per_unit_usd).toFixed(2)}/unit`}
+                  />
                 </div>
               </div>
 
