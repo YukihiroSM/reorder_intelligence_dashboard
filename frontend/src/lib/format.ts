@@ -15,11 +15,16 @@ export function num(n: number, dp = 1): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })
 }
 
-/** "24 Apr" style. */
-export function shortDate(iso: string | null): string {
+/** "7 Apr" style; appends the year ("Apr 7, 2027") when it isn't the data year,
+ *  so a far-future reorder date isn't misread as the current year. */
+export function shortDate(iso: string | null, today?: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  const base = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  const refYear = today
+    ? new Date(today + 'T00:00:00').getFullYear()
+    : new Date().getFullYear()
+  return d.getFullYear() === refYear ? base : `${base}, ${d.getFullYear()}`
 }
 
 /** Whole days between an ISO date and `today` (positive = in the past / overdue). */

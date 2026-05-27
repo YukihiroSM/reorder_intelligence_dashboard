@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { History, Plus, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react'
 
 import { FLAG_DEFS } from '../lib/constants'
-import { daysAgo, money, num } from '../lib/format'
+import { daysAgo, money, num, shortDate } from '../lib/format'
 import type { SKU } from '../types'
 import { FlagChip, StatusBadge } from './atoms'
 
@@ -406,7 +406,7 @@ export function SKUDrawer({
                   />
                   <MetricCell
                     label="Reorder by"
-                    value={r.reorder_date ? new Date(r.reorder_date + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '—'}
+                    value={shortDate(r.reorder_date, dataDate)}
                     caption={isOverdue ? `overdue ${overdue}d` : 'on schedule'}
                     highlight={isOverdue}
                   />
