@@ -121,6 +121,29 @@ prepare ──► route ──► reason ──► verify ──► finalize
    grounded fact-pack + verify pattern.
 4. **Streaming** the AI briefing token-by-token.
 
+### Scaling to thousands of SKUs
+
+Today `/api/skus` loads every SKU, computes its metrics in Python, then filters, sorts and
+paginates in memory — deliberately simple, and fine for the hundreds this is built for. To
+take the same dashboard to thousands of SKUs I'd:
+
+- **Precompute metrics on import, not per request** — materialise per-SKU baseline metrics
+  (at the snapshot's `today`) into a table / materialized view, refreshed by the importer.
+  The scenario growth % is a linear factor on velocity, so live scenarios stay a cheap SQL
+  transform instead of a recompute from raw sales history.
+- **Push filter / sort / pagination into Postgres** with the right indexes and **keyset
+  (cursor) pagination** — a page becomes one indexed query rather than materialising the
+  whole catalogue on every call (offset pagination also degrades at depth).
+- **Aggregate velocity in SQL** — windowed sums over `sku_sales_daily` so a request stops
+  pulling raw daily rows for every SKU.
+- **Keep the AI flat-cost** — the LangGraph `prepare` node already ranks and takes only the
+  **top-N actionable** SKUs, so the model never sees more than a handful regardless of
+  catalogue size. The deterministic pre-filter is the scaling lever, not a bigger prompt.
+
+The pure calculation core (`services/calculations.py`) doesn't change — only *where* and
+*how often* it runs moves. That separation is exactly why this stays a config change, not a
+rewrite.
+
 ## Local setup
 
 The `.env` lives at the **repo root** (holds `DATABASE_URL`, optional `OPENAI_API_KEY`,
