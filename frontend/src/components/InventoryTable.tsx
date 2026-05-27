@@ -199,6 +199,7 @@ export function InventoryTable({
                   </th>
                   <th scope="col" style={{ width: 140 }}>30-day trend</th>
                   <th scope="col" className="num" style={{ width: 96 }}>7d / 14d</th>
+                  <th scope="col" className="num" style={{ width: 96 }}>Lead · ship</th>
                   <th scope="col" className={`num sortable ${sort.key === 'days' ? 'active' : ''}`} style={{ width: 80 }} aria-sort={ariaSort('days')} onClick={() => toggleSort('days')}>
                     Days left {arrow('days')}
                   </th>
@@ -240,6 +241,14 @@ export function InventoryTable({
                         {num(r.velocity_14d)}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>units/day</div>
+                    </td>
+                    <td className="num">
+                      <div className="vel-pair">
+                        <span className="strong">{r.production_lead_days}</span>
+                        <span style={{ opacity: 0.5, margin: '0 3px' }}>+</span>
+                        {r.shipping_days}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>prod + ship (d)</div>
                     </td>
                     {daysCell(r)}
                     <td className="reorder">{reorderCell(r)}</td>
