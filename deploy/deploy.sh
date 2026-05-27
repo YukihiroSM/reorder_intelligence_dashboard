@@ -42,8 +42,12 @@ echo "==> Building & starting Postgres + backend (waiting for healthy)..."
 $COMPOSE up -d --build --wait --wait-timeout 180
 
 # --- frontend -> webroot ----------------------------------------------------
-echo "==> Building the SPA into $WEBROOT..."
+# Rebuild the SPA image from the LATEST source first. `compose run` on its own
+# reuses a cached image, so without this explicit build the webroot keeps serving
+# the dist baked into the previously built image (the "frontend never updates" bug).
+echo "==> Rebuilding & deploying the SPA into $WEBROOT..."
 mkdir -p "$WEBROOT"
+$COMPOSE --profile build build frontend-build
 WEBROOT="$WEBROOT" $COMPOSE --profile build run --rm frontend-build
 chmod -R a+rX "$WEBROOT" 2>/dev/null || true
 

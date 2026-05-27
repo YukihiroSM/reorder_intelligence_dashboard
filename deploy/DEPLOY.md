@@ -46,6 +46,8 @@ Check: `curl http://127.0.0.1:8091/api/health`
 ## 3. Build the SPA into the webroot
 ```
 sudo mkdir -p /var/www/reorder-intelligence
+# `build` first — `run` reuses a cached image, so skipping this re-deploys the OLD dist.
+docker compose -f docker-compose.prod.yml --profile build build frontend-build
 WEBROOT=/var/www/reorder-intelligence \
   docker compose -f docker-compose.prod.yml --profile build run --rm frontend-build
 ```
@@ -62,10 +64,12 @@ sudo certbot --nginx -d reorder-intelligence.yuk0-dev-team.pp.ua
 ## Updating
 ```
 git pull
-docker compose -f docker-compose.prod.yml up -d --build        # backend
+docker compose -f docker-compose.prod.yml up -d --build        # backend (rebuilds)
+docker compose -f docker-compose.prod.yml --profile build build frontend-build  # rebuild SPA
 WEBROOT=/var/www/reorder-intelligence \
-  docker compose -f docker-compose.prod.yml --profile build run --rm frontend-build  # frontend
+  docker compose -f docker-compose.prod.yml --profile build run --rm frontend-build  # copy to webroot
 ```
+Or just re-run `./deploy/deploy.sh` — it does all of this.
 
 ## Notes
 - `/docs` and `/openapi.json` aren't exposed (they fall through to the SPA). To
