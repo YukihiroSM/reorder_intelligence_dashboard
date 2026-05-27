@@ -134,7 +134,7 @@ def _build_dto(
         estimated_reorder_cost=float(m.estimated_reorder_cost),
         status=m.status,
         trend=m.trend,
-        confidence_flags=[f.value for f in m.confidence_flags],
+        confidence_flags=m.confidence_flags,
         sales_last_30_days=sales if include_sales else None,
     )
 

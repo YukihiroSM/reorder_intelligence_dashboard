@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
 
-from ..enums import StockHealthStatus
+from ..enums import ConfidenceFlag, StockHealthStatus
 
 
 class SKUMetricsDTO(BaseModel):
@@ -36,8 +37,8 @@ class SKUMetricsDTO(BaseModel):
     estimated_reorder_cost: float
 
     status: StockHealthStatus
-    trend: str
-    confidence_flags: list[str]
+    trend: Literal["up", "down", "flat"]
+    confidence_flags: list[ConfidenceFlag]
 
     # Only populated on the single-SKU detail endpoint (for the trend chart).
     sales_last_30_days: list[int] | None = None

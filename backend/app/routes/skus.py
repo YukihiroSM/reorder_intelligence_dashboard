@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,6 +21,14 @@ from ..services.sku_metrics import (
 
 router = APIRouter(prefix="/api", tags=["skus"])
 
+
+class SortKey(str, Enum):
+    urgency_desc = "urgency_desc"
+    days_remaining_asc = "days_remaining_asc"
+    days_remaining_desc = "days_remaining_desc"
+    name_asc = "name_asc"
+    cost_desc = "cost_desc"
+
 # Higher = more urgent. Drives the default sort.
 _URGENCY = {
     StockHealthStatus.STOCKOUT: 3,
@@ -34,16 +43,16 @@ def _days_key(m: SKUMetricsDTO) -> tuple[bool, float]:
     return (m.days_of_stock is None, m.days_of_stock if m.days_of_stock is not None else 0.0)
 
 
-_SORTERS: dict[str, Callable[[Sequence[SKUMetricsDTO]], list[SKUMetricsDTO]]] = {
-    "urgency_desc": lambda ms: sorted(
+_SORTERS: dict[SortKey, Callable[[Sequence[SKUMetricsDTO]], list[SKUMetricsDTO]]] = {
+    SortKey.urgency_desc: lambda ms: sorted(
         ms, key=lambda m: (-_URGENCY[m.status], *_days_key(m))
     ),
-    "days_remaining_asc": lambda ms: sorted(ms, key=_days_key),
-    "days_remaining_desc": lambda ms: sorted(
+    SortKey.days_remaining_asc: lambda ms: sorted(ms, key=_days_key),
+    SortKey.days_remaining_desc: lambda ms: sorted(
         ms, key=lambda m: (m.days_of_stock is None, -(m.days_of_stock or 0.0))
     ),
-    "name_asc": lambda ms: sorted(ms, key=lambda m: m.name.lower()),
-    "cost_desc": lambda ms: sorted(
+    SortKey.name_asc: lambda ms: sorted(ms, key=lambda m: m.name.lower()),
+    SortKey.cost_desc: lambda ms: sorted(
         ms, key=lambda m: m.estimated_reorder_cost, reverse=True
     ),
 }
@@ -55,16 +64,11 @@ async def list_skus(
     status: Annotated[list[StockHealthStatus] | None, Query()] = None,
     category: str | None = None,
     supplier: str | None = None,
-    sort: str = "urgency_desc",
+    sort: SortKey = SortKey.urgency_desc,
     growth_pct: float | None = None,
     forecast_window: int | None = None,
     shipping_buffer: int | None = None,
 ) -> list[SKUMetricsDTO]:
-    if sort not in _SORTERS:
-        raise HTTPException(
-            status_code=422,
-            detail=f"unknown sort '{sort}'; valid: {sorted(_SORTERS)}",
-        )
     app_config = await session.get(AppConfig, "active")
     config = build_calc_config(
         app_config,
